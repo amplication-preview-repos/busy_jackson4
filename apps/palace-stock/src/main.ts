@@ -23,6 +23,13 @@ async function main() {
     })
   );
 
+  //This fix is based on https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt#use_within_json
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  //@ts-ignore
+  BigInt.prototype.toJSON = function () {
+    return this.toString();
+  };
+
   const document = SwaggerModule.createDocument(app, swaggerDocumentOptions);
 
   /** check if there is Public decorator for each path (action) and its method (findMany / findOne) on each controller */
