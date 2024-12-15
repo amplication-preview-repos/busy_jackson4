@@ -1,0 +1,2549 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DB_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  createdAt DateTime @default(now())
+  email     String?  @unique
+  firstName String?
+  id        String   @id @default(cuid())
+  lastName  String?
+  password  String
+  roles     Json
+  updatedAt DateTime @updatedAt
+  username  String   @unique
+}
+
+model Tag {
+  articles ArticleToTag[]
+  id       Int            @id @default(autoincrement())
+  name     String         @unique
+}
+
+model Article {
+  authorId       Int
+  body           String         @default("")
+  comment        Comment[]
+  createdAt      DateTime       @default(now())
+  description    String         @default("")
+  favoritesCount Int            @default(0)
+  id             Int            @id @default(autoincrement())
+  slug           String         @unique
+  tagList        ArticleToTag[]
+  title          String
+  updatedAt      DateTime       @updatedAt
+}
+
+model Comment {
+  article   Article  @relation(fields: [articleId], references: [id])
+  articleId Int
+  authorId  Int
+  body      String
+  createdAt DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  updatedAt DateTime @updatedAt
+}
+
+model ArticleToTag {
+  article   Article @relation(fields: [articleId], references: [id])
+  articleId Int
+  id        Int     @id @default(autoincrement())
+  tag       Tag     @relation(fields: [tagId], references: [id])
+  tagId     Int
+
+  @@unique([articleId, tagId])
+}
+
+model AccessLevel {
+  descripcionNivel String?     @map("descripcion_nivel") @db.VarChar(100)
+  id               Int         @id @default(autoincrement()) @db.UnsignedInt
+  nivel            String      @db.Char(1)
+  nivelConsulta    String      @map("nivel_consulta") @db.VarChar(20)
+  users            UserModel[]
+
+  @@map("access_levels")
+}
+
+model AirtimeRecharge {
+  conektaPaymentTransacs         ConektaPaymentTransac? @relation(fields: [conekta_payment_transaction_id], references: [id])
+  conekta_payment_transaction_id Int?
+  descripcion                    String                 @db.VarChar(100)
+  fechaRegistro                  DateTime?              @map("fecha_registro") @db.DateTime(0)
+  id                             Int                    @id @default(autoincrement()) @db.UnsignedInt
+  idTransaccion                  String                 @map("id_transaccion") @db.VarChar(50)
+  monto                          String                 @db.VarChar(10)
+  numeroTel                      String                 @map("numero_tel") @db.VarChar(10)
+  operadora                      String                 @db.VarChar(20)
+  paycodePaymentTransacs         PaycodePaymentTransac? @relation(fields: [paycode_payment_transaction_id], references: [id])
+  paycode_payment_transaction_id Int?
+  sku                            String                 @db.VarChar(20)
+  tipo                           String                 @db.VarChar(20)
+  vigencia                       String                 @db.VarChar(10)
+
+  @@index([conekta_payment_transaction_id], map: "airtime_recharges_conekta_payment_transacs_foreign")
+  @@index([paycode_payment_transaction_id], map: "airtime_recharges_paycode_payment_transacs_foreign")
+  @@map("airtime_recharges")
+}
+
+model AngazaAccount {
+  billingModel            String       @map("billing_model") @db.VarChar(50)
+  clientQids              String       @map("client_qids") @db.VarChar(100)
+  cumulativeDaysDisabled  Int          @map("cumulative_days_disabled")
+  currency                String       @db.VarChar(10)
+  customers               Customer     @relation(fields: [customer_id], references: [id])
+  customer_id             Int
+  downPayment             String       @map("down_payment") @db.VarChar(10)
+  downPaymentDaysIncluded String       @map("down_payment_days_included") @db.VarChar(10)
+  fechaRegistro           DateTime     @map("fecha_registro") @db.DateTime(0)
+  financedSales           FinancedSale @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id        Int
+  fullPrice               String       @map("full_price") @db.VarChar(10)
+  id                      Int          @id @default(autoincrement()) @db.UnsignedInt
+  latestPaymentWhen       String       @map("latest_payment_when") @db.VarChar(100)
+  minimumPayment          String       @map("minimum_payment") @db.VarChar(10)
+  paymentAmountPerPeriod  String       @map("payment_amount_per_period") @db.VarChar(30)
+  paymentDueDate          DateTime     @map("payment_due_date") @db.DateTime(0)
+  paymentPeriodInDays     String       @map("payment_period_in_days") @db.VarChar(20)
+  qid                     String       @db.VarChar(20)
+  registrationDate        DateTime     @map("registration_date") @db.DateTime(0)
+  status                  String       @db.VarChar(50)
+  totalPaid               String       @map("total_paid") @db.VarChar(10)
+  unitNumber              Int          @map("unit_number")
+  uuidIdentifier          String       @map("uuid_identifier") @db.VarChar(50)
+
+  @@index([customer_id], map: "angaza_accounts_customers_foreign")
+  @@index([financed_sale_id], map: "angaza_accounts_financed_sales_foreign")
+  @@map("angaza_accounts")
+}
+
+model AngazaApiLog {
+  callDate         DateTime  @map("call_date") @db.Date
+  calledMethod     String    @map("called_method") @db.VarChar(50)
+  callTime         DateTime  @map("call_time") @db.Time(0)
+  calltrace        String?   @db.Text
+  dataSend         String?   @map("data_send") @db.Text
+  headers          String    @db.VarChar(800)
+  id               Int       @id @default(autoincrement()) @db.UnsignedInt
+  response         String?   @db.Text
+  responseDatetime DateTime? @map("response_datetime") @db.DateTime(0)
+  url              String    @db.VarChar(120)
+
+  @@index([calledMethod, callTime], map: "angaza_api_log_called_method_call_time_index")
+  @@index([calledMethod], map: "angaza_api_log_called_method_index")
+  @@map("angaza_api_log")
+}
+
+model AngazaPayment {
+  accountNumber        String        @map("account_number") @db.VarChar(50)
+  accountQid           String        @map("account_qid") @db.VarChar(50)
+  amount               String        @db.VarChar(50)
+  angazaTransactionQid String        @map("angaza_transaction_qid") @db.VarChar(50)
+  currency             String        @db.VarChar(20)
+  effectiveDate        DateTime      @map("effective_date") @db.DateTime(0)
+  externalXref         String?       @map("external_xref") @db.VarChar(50)
+  fechaRegistro        DateTime      @map("fecha_registro") @db.DateTime(0)
+  financedSales        FinancedSale? @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id     Int?
+  id                   Int           @id @default(autoincrement()) @db.UnsignedInt
+  isReversed           String        @map("is_reversed") @db.VarChar(100)
+  msisdn               String?       @db.VarChar(20)
+  payQid               String        @map("pay_qid") @db.VarChar(20)
+  uuidIdentifier       String?       @map("uuid_identifier") @db.VarChar(50)
+
+  @@index([financed_sale_id], map: "payments_angaza_financed_sales_foreign")
+  @@map("angaza_payments")
+}
+
+model BankReceipt {
+  autorizacion       String?                           @db.VarChar(30)
+  banco              String                            @db.VarChar(10)
+  cashCounts         CashCount                         @relation(fields: [cash_count_id], references: [id])
+  cash_count_id      Int
+  createdUserId      Int                               @map("created_user_id") @db.UnsignedInt
+  estatus_ficha      EnumBankReceiptEstatusFicha       @default(A)
+  estatus_validacion EnumBankReceiptEstatusValidacion? @default(SV)
+  fechaDeposito      DateTime                          @map("fecha_deposito") @db.Date
+  fechaRegistro      DateTime                          @default(now()) @map("fecha_registro") @db.Timestamp(0)
+  fechaValidacion    DateTime?                         @map("fecha_validacion") @db.Timestamp(0)
+  folio              String?                           @db.VarChar(30)
+  id                 Int                               @id @default(autoincrement()) @db.UnsignedInt
+  idBanco            String?                           @map("id_banco") @db.VarChar(25)
+  montoDeposito      Decimal                           @map("monto_deposito") @db.Decimal(20, 15)
+  tipo_deposito      EnumBankReceiptTipoDeposito?
+  validUserId        Int?                              @map("valid_user_id") @db.UnsignedInt
+
+  @@index([cash_count_id], map: "bank_receipts_cash_counts_foreign")
+  @@map("bank_receipts")
+}
+
+model BillDetail {
+  codigoSerie   String    @map("codigo_serie") @db.VarChar(30)
+  createdUserId Int?      @map("created_user_id") @db.UnsignedInt
+  desctoUnidad  Decimal   @default(0.00) @map("descto_unidad") @db.Decimal(7, 2)
+  fechaRegistro DateTime? @map("fecha_registro") @db.DateTime(0)
+  id            Int       @id @default(autoincrement()) @db.UnsignedInt
+  idFactura     Int       @map("id_factura") @db.UnsignedInt
+  items         Item      @relation(fields: [item_id], references: [id])
+  item_id       Int
+  precioUnidad  Decimal   @map("precio_unidad") @db.Decimal(7, 2)
+
+  @@index([item_id], map: "bill_details_items_foreign")
+  @@map("bill_details")
+}
+
+model BillingApiLog {
+  billingId        Int?      @map("billing_id") @db.UnsignedInt
+  callDate         DateTime  @map("call_date") @db.Date
+  calledMethod     String    @map("called_method") @db.VarChar(50)
+  callTime         DateTime  @map("call_time") @db.Time(0)
+  calltrace        String?   @db.Text
+  complementId     Int?      @map("complement_id") @db.UnsignedInt
+  dataSend         String?   @map("data_send") @db.Text
+  headers          String    @db.VarChar(350)
+  id               Int       @id @default(autoincrement()) @db.UnsignedInt
+  referenceId      String?   @map("reference_id") @db.VarChar(15)
+  response         String?   @db.Text
+  responseDatetime DateTime? @map("response_datetime") @db.DateTime(0)
+  url              String    @db.VarChar(120)
+
+  @@index([referenceId], map: "billing_api_log_reference_id_index")
+  @@map("billing_api_log")
+}
+
+model BillingCfdiUs {
+  aplicaPersFisica Int    @map("aplica_pers_fisica") @db.TinyInt
+  aplicaPersMoral  Int    @map("aplica_pers_moral") @db.TinyInt
+  clave            String @db.VarChar(5)
+  descripcion      String @db.VarChar(100)
+  id               Int    @id @default(autoincrement()) @db.UnsignedInt
+
+  @@map("billing_cfdi_uses")
+}
+
+model BillingClassifCode {
+  codigoClasificacion String @map("codigo_clasificacion") @db.Char(3)
+  descripcion         String @db.VarChar(30)
+  id                  Int    @id @default(autoincrement()) @db.UnsignedInt
+
+  @@map("billing_classif_codes")
+}
+
+model BillingConceptCode {
+  codigoConcepto String @map("codigo_concepto") @db.VarChar(6)
+  descripcion    String @db.VarChar(50)
+  id             Int    @id @default(autoincrement()) @db.UnsignedInt
+
+  @@map("billing_concept_codes")
+}
+
+model BillingConcept {
+  claveUsoCfdi    String? @map("clave_uso_cfdi") @db.Char(3)
+  codigoConcepto  String? @map("codigo_concepto") @db.VarChar(6)
+  conceptoFactura String  @map("concepto_factura") @db.Char(2)
+  descripcion     String? @db.VarChar(100)
+  id              Int     @id @default(autoincrement()) @db.UnsignedInt
+  numFormaPago    String? @map("num_forma_pago") @db.Char(2)
+  serieFactura    String? @map("serie_factura") @db.VarChar(3)
+
+  @@map("billing_concepts")
+}
+
+model BillingFiscalRegime {
+  clave       String @db.VarChar(5)
+  descripcion String @db.VarChar(100)
+  id          Int    @id @default(autoincrement()) @db.UnsignedInt
+
+  @@map("billing_fiscal_regimes")
+}
+
+model BillingSatKey {
+  claveSatPs  Int    @map("clave_sat_ps") @db.UnsignedInt
+  descripcion String @db.VarChar(100)
+  id          Int    @id @default(autoincrement()) @db.UnsignedInt
+
+  @@map("billing_sat_keys")
+}
+
+model BillingSery {
+  descripcion  String? @db.VarChar(100)
+  id           Int     @id @default(autoincrement()) @db.UnsignedInt
+  serieFactura String  @map("serie_factura") @db.VarChar(3)
+
+  @@map("billing_series")
+}
+
+model BillingWebhookLog {
+  fechaRegistro DateTime? @default(now()) @map("fecha_registro") @db.DateTime(0)
+  id            Int       @id @default(autoincrement()) @db.UnsignedInt
+  referenceId   String?   @map("reference_id") @db.VarChar(15)
+  response      String?   @db.Text
+
+  @@index([referenceId], map: "billing_webhook_log_reference_id_index")
+  @@map("billing_webhook_log")
+}
+
+model Bill {
+  billConcept        String                 @map("bill_concept") @db.Char(2)
+  billingId          Int?                   @map("billing_id") @db.UnsignedInt
+  bill_status        EnumBillBillStatus     @default(I)
+  canceledUserId     Int?                   @map("canceled_user_id") @db.UnsignedInt
+  cashSales          CashSale?              @relation(fields: [cash_sale_id], references: [id])
+  cash_sale_id       Int?
+  clientCode         String?                @map("client_code") @db.VarChar(15)
+  codigoConcepto     String?                @map("codigo_concepto") @db.VarChar(6)
+  complementId       Int?                   @map("complement_id") @db.UnsignedInt
+  createdUserId      Int?                   @map("created_user_id") @db.UnsignedInt
+  engancheFinanc     Decimal?               @map("enganche_financ") @db.Decimal(7, 2)
+  factura_cerrada    EnumBillFacturaCerrada @default(F)
+  fechaActualizacion DateTime?              @map("fecha_actualizacion") @db.DateTime(0)
+  fechaCancelacion   DateTime?              @map("fecha_cancelacion") @db.DateTime(0)
+  fechaRegistro      DateTime               @map("fecha_registro") @db.Date
+  financedSales      FinancedSale?          @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id   Int?
+  folio              Int?                   @db.UnsignedInt
+  horaRegistro       DateTime               @map("hora_registro") @db.Time(0)
+  id                 Int                    @id @default(autoincrement()) @db.UnsignedInt
+  mensajeEstatus     String?                @map("mensaje_estatus") @db.VarChar(200)
+  montoFactura       Decimal?               @map("monto_factura") @db.Decimal(7, 2)
+  payments           Payment?               @relation(fields: [payment_id], references: [id])
+  payment_id         Int?
+  referenceId        String                 @map("reference_id") @db.VarChar(15)
+  rutaPdf            String?                @map("ruta_pdf") @db.VarChar(100)
+  rutaXml            String?                @map("ruta_xml") @db.VarChar(100)
+  saldoFactura       Decimal                @default(0.00) @map("saldo_factura") @db.Decimal(7, 2)
+  saldoFacturaTemp   Decimal?               @map("saldo_factura_temp") @db.Decimal(7, 2)
+  serie              String?                @db.VarChar(5)
+  stampedAt          DateTime?              @map("stamped_at") @db.DateTime(0)
+  tipo_docto         EnumBillTipoDocto
+  tipo_sucursal      EnumBillTipoSucursal?
+  updatedUserId      Int?                   @map("updated_user_id") @db.UnsignedInt
+
+  @@unique([serie, folio], map: "bills_serie_folio_unique")
+  @@index([billConcept], map: "bills_bill_concept_index")
+  @@index([cash_sale_id, billConcept, bill_status], map: "bills_cash_sale_id_bill_concept_bill_status_index")
+  @@index([cash_sale_id, billConcept], map: "bills_cash_sale_id_bill_concept_index")
+  @@index([financed_sale_id, billConcept], map: "bills_financed_sale_id_bill_concept_index")
+  @@index([financed_sale_id, billConcept, stampedAt], map: "bills_financed_sale_id_bill_concept_stamped_at_index")
+  @@index([payment_id, billConcept, bill_status], map: "bills_payment_id_bill_concept_bill_status_index")
+  @@index([payment_id, billConcept], map: "bills_payment_id_bill_concept_index")
+  @@index([referenceId], map: "bills_reference_id_index")
+  @@map("bills")
+}
+
+model BranchManager {
+  cargo            Int           @db.TinyInt
+  collaborators    Collaborator? @relation(fields: [collaborator_id], references: [id])
+  collaborator_id  Int?
+  fechaIniciaCargo DateTime      @map("fecha_inicia_cargo") @db.Date
+  id               Int           @id @default(autoincrement()) @db.UnsignedInt
+  numSucursal      Int?          @map("num_sucursal") @db.MediumInt
+  users            UserModel     @relation(fields: [created_user_id], references: [id])
+  created_user_id  Int
+  warehouses       Warehouse?    @relation(fields: [warehouse_id], references: [id])
+  warehouse_id     Int?
+
+  @@index([collaborator_id], map: "branch_managers_collaborators_foreign")
+  @@index([created_user_id], map: "branch_managers_users_foreign")
+  @@index([warehouse_id], map: "branch_managers_warehouses_foreign")
+  @@map("branch_managers")
+}
+
+model BranchOffice {
+  branchName                                                   String                          @unique @map("branch_name") @db.VarChar(100)
+  branchNo                                                     Int                             @unique @map("branch_no") @db.SmallInt
+  ciudadMunicipio                                              String?                         @map("ciudad_municipio") @db.VarChar(60)
+  codigoPostal                                                 String?                         @map("codigo_postal") @db.VarChar(5)
+  direccion                                                    String?                         @db.VarChar(100)
+  estadoRepublica                                              String?                         @map("estado_republica") @db.VarChar(50)
+  estatus_sucursal                                             EnumBranchOfficeEstatusSucursal
+  fechaRegistro                                                DateTime                        @default(now()) @map("fecha_registro") @db.Timestamp(0)
+  id                                                           Int                             @id @default(autoincrement()) @db.UnsignedInt
+  region                                                       String?                         @db.VarChar(30)
+  transacErrors                                                TransacError[]
+  transactionsTransactionsAnotherBranchOfficeIdTobranchOffices Transaction[]                   @relation(name: "branchOfficesTransactionsAnotherBranchOfficeIdTobranchOffices")
+  transactionsTransactionsBranchOfficeIdTobranchOffices        Transaction[]                   @relation(name: "branchOfficesTransactionsBranchOfficeIdTobranchOffices")
+  users                                                        UserModel                       @relation(fields: [created_user_id], references: [id])
+  created_user_id                                              Int
+  warehouses                                                   Warehouse[]
+
+  @@index([created_user_id], map: "branch_offices_users_foreign")
+  @@map("branch_offices")
+}
+
+model CashCountDetail {
+  cashCounts       CashCount                           @relation(fields: [cash_count_id], references: [id])
+  cash_count_id    Int
+  cashSales        CashSale?                           @relation(fields: [cash_sale_id], references: [id])
+  cash_sale_id     Int?                                @unique
+  estatus_desglose EnumCashCountDetailEstatusDesglose? @default(A)
+  financedSales    FinancedSale?                       @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id Int?                                @unique
+  id               Int                                 @id @default(autoincrement()) @db.UnsignedInt
+  ingreso          Decimal?                            @db.Decimal(20, 15)
+  payments         Payment?                            @relation(fields: [payment_id], references: [id])
+  payment_id       Int?                                @unique
+
+  @@index([cash_count_id], map: "cash_count_details_cash_counts_foreign")
+  @@map("cash_count_details")
+}
+
+model CashCount {
+  bankReceipts       BankReceipt[]
+  cashCountDetails   CashCountDetail[]
+  comentarios        String?                         @db.VarChar(3000)
+  createdUserId      Int                             @map("created_user_id") @db.UnsignedInt
+  estatus_validacion EnumCashCountEstatusValidacion? @default(SV)
+  fechaRegistro      DateTime                        @default(now()) @map("fecha_registro") @db.Timestamp(0)
+  fechaValidacion    DateTime?                       @map("fecha_validacion") @db.Timestamp(0)
+  fromDate           DateTime                        @map("from_date") @db.Date
+  id                 Int                             @id @default(autoincrement()) @db.UnsignedInt
+  toDate             DateTime                        @map("to_date") @db.Date
+  validUserId        Int?                            @map("valid_user_id") @db.UnsignedInt
+  warehouses         Warehouse                       @relation(fields: [warehouse_id], references: [id])
+  warehouse_id       Int
+
+  @@unique([fromDate, toDate, warehouse_id], map: "cash_counts_from_date_to_date_warehouse_id_unique")
+  @@unique([fromDate, warehouse_id], map: "cash_counts_from_date_warehouse_id_unique")
+  @@unique([toDate, warehouse_id], map: "cash_counts_to_date_warehouse_id_unique")
+  @@index([warehouse_id], map: "cash_counts_warehouses_foreign")
+  @@map("cash_counts")
+}
+
+model CashSaleDetail {
+  cantUnidades     Int     @map("cant_unidades") @db.UnsignedTinyInt
+  cashSaleId       Int     @map("cash_sale_id") @db.UnsignedInt
+  codigoBloqueo    String? @map("codigo_bloqueo") @db.VarChar(20)
+  codigoSerie      String? @map("codigo_serie") @db.VarChar(30)
+  desctoAplicado   Int     @default(0) @map("descto_aplicado") @db.SmallInt
+  id               Int     @id @default(autoincrement()) @db.UnsignedInt
+  items            Item    @relation(fields: [item_id], references: [id])
+  item_id          Int
+  ivaUnidad        Decimal @map("iva_unidad") @db.Decimal(16, 4)
+  porcentajeDescto Int?    @map("porcentaje_descto") @db.UnsignedTinyInt
+  precioUnidad     Decimal @map("precio_unidad") @db.Decimal(16, 4)
+
+  @@index([item_id], map: "cash_sale_details_items_foreign")
+  @@map("cash_sale_details")
+}
+
+model CashSale {
+  apellido1Cliente      String?                  @map("apellido_1_cliente") @db.VarChar(30)
+  apellido2Cliente      String?                  @map("apellido_2_cliente") @db.VarChar(30)
+  bills                 Bill[]
+  cashCountDetails      CashCountDetail?
+  createdUserId         Int                      @map("created_user_id") @db.UnsignedInt
+  estatus_venta         EnumCashSaleEstatusVenta @default(A)
+  fechaRegistro         DateTime                 @map("fecha_registro") @db.DateTime(0)
+  fechaVenta            DateTime                 @map("fecha_venta") @db.Date
+  id                    Int                      @id @default(autoincrement()) @db.UnsignedInt
+  kardex                Kardex[]
+  metodoPago            String                   @map("metodo_pago") @db.Char(2)
+  nombreCompletoCliente String?                  @map("nombre_completo_cliente") @db.VarChar(60)
+  nombresCliente        String?                  @map("nombres_cliente") @db.VarChar(40)
+  totalUnidades         Int                      @map("total_unidades") @db.UnsignedTinyInt
+  totalVenta            Decimal                  @map("total_venta") @db.Decimal(16, 4)
+  ubicacion             String?                  @db.VarChar(250)
+  ubicacionLatitud      Decimal?                 @map("ubicacion_latitud") @db.Decimal(10, 7)
+  ubicacionLongitud     Decimal?                 @map("ubicacion_longitud") @db.Decimal(10, 7)
+  warehouses            Warehouse                @relation(fields: [warehouse_id], references: [id])
+  warehouse_id          Int
+
+  @@index([warehouse_id], map: "cash_sales_warehouses_foreign")
+  @@map("cash_sales")
+}
+
+model Category {
+  catCode             String  @unique @map("cat_code") @db.VarChar(12)
+  claveSatPs          Int?    @map("clave_sat_ps") @db.UnsignedInt
+  codigoClasificacion String? @map("codigo_clasificacion") @db.Char(3)
+  descripcionCat      String  @map("descripcion_cat") @db.VarChar(48)
+  id                  Int     @id @default(autoincrement()) @db.UnsignedInt
+  items               Item[]
+
+  @@map("categories")
+}
+
+model Collaborator {
+  apellido1                               String                             @map("apellido_1") @db.VarChar(30)
+  apellido2                               String?                            @map("apellido_2") @db.VarChar(30)
+  branchManagers                          BranchManager[]
+  cargo                                   String?                            @db.VarChar(10)
+  ciudad                                  String?                            @db.VarChar(50)
+  ciudadActual                            String?                            @map("ciudad_actual") @db.VarChar(50)
+  codigoPostal                            Int?                               @map("codigo_postal")
+  codigoPostalActual                      Int?                               @map("codigo_postal_actual") @db.UnsignedInt
+  colonia                                 String?                            @db.VarChar(100)
+  coloniaActual                           String?                            @map("colonia_actual") @db.VarChar(100)
+  correoContacto                          String?                            @map("correo_contacto") @db.VarChar(100)
+  curp                                    String                             @unique @db.Char(18)
+  direccionActual                         String?                            @map("direccion_actual") @db.VarChar(2)
+  documents                               Document[]
+  domicilio                               String?                            @db.VarChar(100)
+  domicilioActual                         String?                            @map("domicilio_actual") @db.VarChar(100)
+  esquemaPago                             String?                            @map("esquema_pago") @db.VarChar(30)
+  estado                                  String?                            @db.VarChar(100)
+  estadoActual                            String?                            @map("estado_actual") @db.VarChar(50)
+  estatus_colaborador                     EnumCollaboratorEstatusColaborador @default(A)
+  fechaCambioEsquema                      DateTime?                          @map("fecha_cambio_esquema") @db.Date
+  fechaIngreso                            DateTime?                          @map("fecha_ingreso") @db.Date
+  fechaNacimiento                         DateTime?                          @map("fecha_nacimiento") @db.Date
+  fechaRegistro                           DateTime                           @default(now()) @map("fecha_registro") @db.Timestamp(0)
+  fechaReingreso                          DateTime?                          @map("fecha_reingreso") @db.Date
+  id                                      Int                                @id @default(autoincrement()) @db.UnsignedInt
+  nombres                                 String                             @db.VarChar(30)
+  rfc                                     String?                            @db.VarChar(15)
+  telefonoContacto                        String?                            @map("telefono_contacto") @db.VarChar(10)
+  usersCollaboratorsCreatedUserIdTousers  UserModel                          @map("users_collaborators_created_user_idTousers") @relation(name: "collaboratorsCollaboratorsCreatedUserIdTousers", fields: [created_user_id], references: [id])
+  created_user_id                         Int                                @map("users_collaborators_created_user_idTousers")
+  usersUsersCollaboratorIdTocollaborators UserModel[]                        @relation(name: "collaboratorsUsersCollaboratorIdTocollaborators")
+
+  @@index([created_user_id], map: "collaborators_users_foreign")
+  @@map("collaborators")
+}
+
+model ComunApiLog {
+  callDate         DateTime  @map("call_date") @db.Date
+  calledMethod     String    @map("called_method") @db.VarChar(50)
+  callTime         DateTime  @map("call_time") @db.Time(0)
+  calltrace        String?   @db.Text
+  dataSend         String?   @map("data_send") @db.Text
+  headers          String    @db.VarChar(1000)
+  id               Int       @id @default(autoincrement()) @db.UnsignedInt
+  response         String?   @db.Text
+  responseDatetime DateTime? @map("response_datetime") @db.DateTime(0)
+  url              String    @db.VarChar(300)
+
+  @@map("comun_api_log")
+}
+
+model ConektaApiLog {
+  callDate                       DateTime               @map("call_date") @db.Date
+  calledMethod                   String                 @map("called_method") @db.VarChar(50)
+  callTime                       DateTime               @map("call_time") @db.Time(0)
+  calltrace                      String?                @db.Text
+  conektaPaymentTransacs         ConektaPaymentTransac? @relation(fields: [conekta_payment_transaction_id], references: [id])
+  conekta_payment_transaction_id Int?
+  dataSend                       String?                @map("data_send") @db.Text
+  id                             Int                    @id @default(autoincrement()) @db.UnsignedInt
+  response                       String?                @db.Text
+  responseDatetime               DateTime?              @map("response_datetime") @db.DateTime(0)
+
+  @@index([conekta_payment_transaction_id], map: "conekta_api_log_conekta_payment_transacs_foreign")
+  @@map("conekta_api_log")
+}
+
+model ConektaPaymentTransac {
+  airtimeRecharges        AirtimeRecharge[]
+  amount                  Int
+  authCode                String?                 @map("auth_code") @db.VarChar(20)
+  clabe                   String?                 @db.VarChar(100)
+  conektaApiLog           ConektaApiLog[]
+  createdAt               DateTime                @map("created_at") @db.DateTime(0)
+  datosPago               String?                 @map("datos_pago") @db.Text
+  expiresAt               DateTime                @map("expires_at") @db.DateTime(0)
+  fechaActualizacion      DateTime?               @map("fecha_actualizacion") @db.DateTime(0)
+  fechaRegistro           DateTime?               @map("fecha_registro") @db.DateTime(0)
+  financedSales           FinancedSale            @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id        Int
+  habilitarPagoRecurrente Int?                    @map("habilitar_pago_recurrente") @db.TinyInt
+  id                      Int                     @id @default(autoincrement()) @db.UnsignedInt
+  issuer                  String?                 @db.VarChar(30)
+  last4                   String?                 @db.VarChar(4)
+  metodoPago              String?                 @map("metodo_pago") @db.VarChar(50)
+  orderId                 String                  @map("order_id") @db.VarChar(22)
+  otherCompaniesPayments  OtherCompaniesPayment[]
+  payments                Payment[]
+  payStatus               String                  @map("pay_status") @db.VarChar(30)
+  recurringPayments       RecurringPayment[]
+  reference               String?                 @db.VarChar(15)
+  rutaRef                 String?                 @map("ruta_ref") @db.VarChar(100)
+  updatedAt               DateTime?               @map("updated_at") @db.DateTime(0)
+  users                   UserModel?              @relation(fields: [created_user_id], references: [id])
+  created_user_id         Int?
+  warehouses              Warehouse?              @relation(fields: [warehouse_id], references: [id])
+  warehouse_id            Int?
+
+  @@index([financed_sale_id], map: "conekta_payment_transacs_financed_sales_foreign")
+  @@index([orderId], map: "conekta_payment_transacs_order_id_index")
+  @@index([created_user_id], map: "conekta_payment_transacs_users_foreign")
+  @@index([warehouse_id], map: "conekta_payment_transacs_warehouses_foreign")
+  @@map("conekta_payment_transacs")
+}
+
+model ConektaWebhookLog {
+  createdAt DateTime @map("created_at") @db.DateTime(0)
+  eventType String   @map("event_type") @db.VarChar(30)
+  id        Int      @id @default(autoincrement()) @db.UnsignedInt
+  idWebhook String   @map("id_webhook") @db.VarChar(30)
+  response  String   @db.Text
+
+  @@map("conekta_webhook_log")
+}
+
+model Configuration {
+  angazaConf            String?   @map("angaza_conf") @db.Text
+  aspectoConf           String?   @map("aspecto_conf") @db.Text
+  cartaLiquidacionDeuda String?   @map("carta_liquidacion_deuda") @db.VarChar(100)
+  claveEmpresa          String    @map("clave_empresa") @db.VarChar(3)
+  conektaConf           String?   @map("conekta_conf") @db.Text
+  contactoAutSuperior   String?   @map("contacto_aut_superior") @db.VarChar(10)
+  contratoEmpresa       String?   @map("contrato_empresa") @db.VarChar(100)
+  contratoEmpresaPdf    String?   @map("contrato_empresa_pdf") @db.VarChar(100)
+  correoEmpresa         String?   @map("correo_empresa") @db.VarChar(100)
+  correoEnviosConf      String?   @map("correo_envios_conf") @db.Text
+  createdUserId         Int?      @map("created_user_id") @db.UnsignedInt
+  descripcionEmpresa    String?   @map("descripcion_empresa") @db.VarChar(100)
+  desctoEspecialConf    String?   @map("descto_especial_conf") @db.Text
+  direccionEmpresa      String?   @map("direccion_empresa") @db.VarChar(200)
+  escrituraPublica      String?   @map("escritura_publica") @db.VarChar(200)
+  facturacionConf       String?   @map("facturacion_conf") @db.Text
+  fechaRegistro         DateTime? @map("fecha_registro") @db.DateTime(0)
+  firmaRepresentante    String?   @map("firma_representante") @db.VarChar(100)
+  googleConf            String?   @map("google_conf") @db.Text
+  id                    Int       @id @default(autoincrement()) @db.UnsignedInt
+  linkSucursalesMaps    String?   @map("link_sucursales_maps") @db.VarChar(200)
+  mediosContacto        String?   @map("medios_contacto") @db.Text
+  nombreEmpresa         String    @map("nombre_empresa") @db.VarChar(50)
+  notarioPublico        String?   @map("notario_publico") @db.VarChar(200)
+  nubariumConf          String?   @map("nubarium_conf") @db.Text
+  nuovoConf             String?   @map("nuovo_conf") @db.Text
+  pagosConf             String?   @map("pagos_conf") @db.Text
+  paycodeConf           String?   @map("paycode_conf") @db.Text
+  razonSocialEmpresa    String?   @map("razon_social_empresa") @db.VarChar(50)
+  recompraAppConf       String?   @map("recompra_app_conf") @db.Text
+  registroPublico       String?   @map("registro_publico") @db.VarChar(200)
+  representanteEmpresa  String?   @map("representante_empresa") @db.VarChar(60)
+  rfcEmpresa            String?   @map("rfc_empresa") @db.VarChar(13)
+  scoreMaxConf          String?   @map("score_max_conf") @db.Text
+  sistemaConf           String?   @map("sistema_conf") @db.Text
+  sitioEmpresa          String?   @map("sitio_empresa") @db.VarChar(100)
+  smsMasivosConf        String?   @map("sms_masivos_conf") @db.Text
+  stripeConf            String?   @map("stripe_conf") @db.Text
+  wtelecomRecargasConf  String?   @map("wtelecom_recargas_conf") @db.Text
+
+  @@map("configurations")
+}
+
+model Customer {
+  angazaAccounts                     AngazaAccount[]
+  antiguedadTrabajo                  String?                         @map("antiguedad_trabajo") @db.VarChar(30)
+  apellido1Cliente                   String?                         @map("apellido_1_cliente") @db.VarChar(30)
+  apellido2Cliente                   String?                         @map("apellido_2_cliente") @db.VarChar(30)
+  billingCfdiUseId                   Int?                            @map("billing_cfdi_use_id") @db.UnsignedInt
+  billingFiscalRegimeId              Int?                            @map("billing_fiscal_regime_id") @db.UnsignedInt
+  ciudadActualCte                    String?                         @map("ciudad_actual_cte") @db.VarChar(100)
+  ciudadCte                          String?                         @map("ciudad_cte") @db.VarChar(100)
+  ciudadRazSoc                       String?                         @map("ciudad_raz_soc") @db.VarChar(100)
+  clabePaycode                       String?                         @map("clabe_paycode") @db.VarChar(30)
+  claveIdCliente                     String?                         @map("clave_id_cliente") @db.VarChar(100)
+  coloniaActualCte                   String?                         @map("colonia_actual_cte") @db.VarChar(50)
+  coloniaCte                         String                          @map("colonia_cte") @db.VarChar(50)
+  coloniaRazSoc                      String?                         @map("colonia_raz_soc") @db.VarChar(30)
+  conekta                            Boolean?                        @db.Bit(1)
+  correoCte                          String?                         @map("correo_cte") @db.VarChar(50)
+  correoRazSoc                       String?                         @map("correo_raz_soc") @db.VarChar(50)
+  cpActualCte                        String?                         @map("cp_actual_cte") @db.Char(5)
+  cpCte                              String                          @map("cp_cte") @db.Char(5)
+  cpRazSoc                           String?                         @map("cp_raz_soc") @db.Char(5)
+  cte_requiere_factura               EnumCustomerCteRequiereFactura
+  curpCliente                        String?                         @map("curp_cliente") @db.VarChar(100)
+  direccionActualCte                 String?                         @map("direccion_actual_cte") @db.VarChar(100)
+  direccionCte                       String                          @map("direccion_cte") @db.VarChar(120)
+  direccionRazSoc                    String?                         @map("direccion_raz_soc") @db.VarChar(100)
+  documents                          Document[]
+  domicilioTrabajo                   String?                         @map("domicilio_trabajo") @db.VarChar(100)
+  edadCliente                        String?                         @map("edad_cliente") @db.Char(3)
+  enganchePromoLealtad               Decimal?                        @map("enganche_promo_lealtad") @db.Decimal(20, 15)
+  estadoRepActualCte                 String?                         @map("estado_rep_actual_cte") @db.VarChar(100)
+  estadoRepCte                       String?                         @map("estado_rep_cte") @db.VarChar(100)
+  estadoRepRazSoc                    String?                         @map("estado_rep_raz_soc") @db.VarChar(50)
+  estatus_cliente                    EnumCustomerEstatusCliente
+  estatusSeguroVida                  Boolean?                        @map("estatus_seguro_vida") @db.Bit(1)
+  fechaActivacionSeguro              DateTime?                       @map("fecha_activacion_seguro") @db.Date
+  fechaAltaCliente                   DateTime                        @map("fecha_alta_cliente") @db.Date
+  fechaRegistro                      DateTime?                       @map("fecha_registro") @db.DateTime(0)
+  fechaUltCambio                     DateTime?                       @map("fecha_ult_cambio") @db.DateTime(0)
+  financedSales                      FinancedSale[]
+  folioSeguroVida                    String?                         @map("folio_seguro_vida") @db.VarChar(50)
+  genero_cliente                     EnumCustomerGeneroCliente?
+  id                                 Int                             @id @default(autoincrement()) @db.UnsignedInt
+  ine_direccion_actual               EnumCustomerIneDireccionActual?
+  loanedDevices                      LoanedDevice[]
+  lockedDevBadCustomers              LockedDevBadCustomer[]
+  lugarTrabajo                       String?                         @map("lugar_trabajo") @db.VarChar(100)
+  montoDisponibleEnganche            Decimal?                        @map("monto_disponible_enganche") @db.Decimal(6, 2)
+  nombreCompletoCliente              String?                         @map("nombre_completo_cliente") @db.VarChar(60)
+  nombresCliente                     String?                         @map("nombres_cliente") @db.VarChar(40)
+  nomRef1Cliente                     String?                         @map("nom_ref1_cliente") @db.VarChar(50)
+  nomRef2Cliente                     String?                         @map("nom_ref2_cliente") @db.VarChar(50)
+  nubariumScore                      String?                         @map("nubarium_score") @db.VarChar(10)
+  numExtCte                          String?                         @map("num_ext_cte") @db.VarChar(5)
+  numExtRazSoc                       String?                         @map("num_ext_raz_soc") @db.VarChar(5)
+  numIntCte                          String?                         @map("num_int_cte") @db.VarChar(5)
+  numIntRazSoc                       String?                         @map("num_int_raz_soc") @db.VarChar(5)
+  numTelCte                          String?                         @map("num_tel_cte") @db.Char(10)
+  numTelFijoCte                      String?                         @map("num_tel_fijo_cte") @db.Char(10)
+  numTelRazSoc                       String?                         @map("num_tel_raz_soc") @db.Char(10)
+  paisRazSoc                         String?                         @map("pais_raz_soc") @db.VarChar(30)
+  personalLoans                      PersonalLoan[]
+  protectionCertActivations          ProtectionCertActivation[]
+  protectionCerts                    ProtectionCert[]
+  puestoTrabajo                      String?                         @map("puesto_trabajo") @db.VarChar(50)
+  qidAngaza                          String?                         @map("qid_angaza") @db.VarChar(20)
+  razonSocialCte                     String?                         @map("razon_social_cte") @db.VarChar(50)
+  rfcCte                             String?                         @map("rfc_cte") @db.VarChar(13)
+  rfcPersonalCte                     String?                         @map("rfc_personal_cte") @db.VarChar(13)
+  rutaFirma                          String?                         @map("ruta_firma") @db.VarChar(500)
+  salarioMensualTrabajo              Decimal?                        @map("salario_mensual_trabajo") @db.Decimal(7, 2)
+  scoreMaxValue                      String?                         @map("score_max_value") @db.VarChar(10)
+  secondaryTelephoneNumber           String?                         @map("secondary_telephone_number") @db.Char(10)
+  supportTickets                     SupportTicket[]
+  telRef1Cliente                     String?                         @map("tel_ref1_cliente") @db.Char(10)
+  telRef2Cliente                     String?                         @map("tel_ref2_cliente") @db.Char(50)
+  tipoIdCliente                      String?                         @map("tipo_id_cliente") @db.Char(3)
+  transactions                       Transaction[]
+  usersCustomersCreatedUserIdTousers UserModel?                      @map("users_customers_created_user_idTousers") @relation(name: "customersCustomersCreatedUserIdTousers", fields: [created_user_id], references: [id])
+  created_user_id                    Int?                            @map("users_customers_created_user_idTousers")
+  usersCustomersUpdatedUserIdTousers UserModel?                      @map("users_customers_updated_user_idTousers") @relation(name: "customersCustomersUpdatedUserIdTousers", fields: [updated_user_id], references: [id])
+  updated_user_id                    Int?                            @map("users_customers_updated_user_idTousers")
+  warehouses                         Warehouse?                      @relation(fields: [warehouse_id], references: [id])
+  warehouse_id                       Int?
+
+  @@index([updated_user_id], map: "customers_updated_users_foreign")
+  @@index([created_user_id], map: "customers_users_foreign")
+  @@index([warehouse_id], map: "customers_warehouses_foreign")
+  @@map("customers")
+}
+
+model DocumentType {
+  claveDocto         String              @map("clave_docto") @db.VarChar(50)
+  descripcion        String?             @db.VarChar(200)
+  id                 Int                 @id @default(autoincrement()) @db.UnsignedInt
+  mandatoryDocuments MandatoryDocument[]
+
+  @@map("document_types")
+}
+
+model Document {
+  collaborators    Collaborator?       @relation(fields: [collaborator_id], references: [id])
+  collaborator_id  Int?
+  customers        Customer?           @relation(fields: [customer_id], references: [id])
+  customer_id      Int?
+  direccion        String              @db.VarChar(100)
+  documentTypeId   Int?                @map("document_type_id") @db.UnsignedInt
+  estatus          EnumDocumentEstatus @default(A)
+  fechaHoraCarga   DateTime            @default(now()) @map("fecha_hora_carga") @db.Timestamp(0)
+  financedSales    FinancedSale?       @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id Int?
+  id               Int                 @id @default(autoincrement()) @db.UnsignedInt
+  idCertProtecAct  Int?                @map("id_cert_protec_act") @db.UnsignedInt
+  idFicha          Int?                @map("id_ficha") @db.UnsignedInt
+  nombreOriginal   String?             @map("nombre_original") @db.VarChar(100)
+  numTicket        Int?                @map("num_ticket")
+  payments         Payment?            @relation(fields: [payment_id], references: [id])
+  payment_id       Int?
+  validado         Boolean?            @db.Bit(1)
+  validatedAt      DateTime?           @map("validated_at") @db.DateTime(0)
+  validationUserId Int?                @map("validation_user_id") @db.UnsignedInt
+
+  @@index([collaborator_id], map: "documents_collaborators_foreign")
+  @@index([customer_id], map: "documents_customers_foreign")
+  @@index([financed_sale_id], map: "documents_financed_sales_foreign")
+  @@index([payment_id], map: "documents_payments_foreign")
+  @@map("documents")
+}
+
+model Estimate {
+  aspira_otro_producto    EnumEstimateAspiraOtroProducto?
+  autoriza_contacto       EnumEstimateAutorizaContacto?
+  createdUserId           Int                             @map("created_user_id") @db.UnsignedInt
+  desctoPagoOportuno      Int                             @default(0) @map("descto_pago_oportuno") @db.TinyInt
+  enganche                Decimal                         @db.Decimal(6, 2)
+  fechaCotiz              DateTime                        @map("fecha_cotiz") @db.DateTime(0)
+  id                      Int                             @id @default(autoincrement()) @db.UnsignedInt
+  interesAnual            Decimal                         @map("interes_anual") @db.Decimal(20, 15)
+  interesSemanalMultiplo  Decimal                         @map("interes_semanal_multiplo") @db.Decimal(20, 18)
+  items                   Item                            @relation(fields: [item_id], references: [id])
+  item_id                 Int
+  montoPago               Decimal                         @map("monto_pago") @db.Decimal(20, 15)
+  motivoRechazo           String?                         @map("motivo_rechazo") @db.VarChar(80)
+  nombreCompletoCliente   String                          @map("nombre_completo_cliente") @db.VarChar(60)
+  numPagos                Int                             @map("num_pagos") @db.TinyInt
+  observacionesCotizacion String?                         @map("observaciones_cotizacion") @db.VarChar(80)
+  pagoSemanalIdeal        Decimal?                        @map("pago_semanal_ideal") @db.Decimal(7, 2)
+  plazo                   EnumEstimatePlazo
+  precioLista             Decimal?                        @map("precio_lista") @db.Decimal(8, 2)
+  productoInteres         String?                         @map("producto_interes") @db.VarChar(50)
+  rechazo_financ          EnumEstimateRechazoFinanc?
+  telefonoCliente         String                          @map("telefono_cliente") @db.VarChar(10)
+  warehouses              Warehouse                       @relation(fields: [warehouse_id], references: [id])
+  warehouse_id            Int
+
+  @@index([item_id], map: "estimates_items_foreign")
+  @@index([warehouse_id], map: "estimates_warehouses_foreign")
+  @@map("estimates")
+}
+
+model FinancedAccessory {
+  cantUnidades      Int          @map("cant_unidades") @db.UnsignedTinyInt
+  engancheAccesorio Decimal      @map("enganche_accesorio") @db.Decimal(6, 2)
+  financedSales     FinancedSale @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id  Int
+  id                Int          @id @default(autoincrement()) @db.UnsignedInt
+  items             Item         @relation(fields: [item_id], references: [id])
+  item_id           Int
+  precioVenta       Decimal      @map("precio_venta") @db.Decimal(7, 2)
+  transactions      Transaction? @relation(fields: [transaction_id], references: [id])
+  transaction_id    Int?
+
+  @@index([financed_sale_id], map: "financed_accessories_financed_sales_foreign")
+  @@index([item_id], map: "financed_accessories_items_foreign")
+  @@index([transaction_id], map: "financed_accessories_transactions_foreign")
+  @@map("financed_accessories")
+}
+
+model FinancedSale {
+  adminAppUnregistered      Int                                      @default(0) @map("admin_app_unregistered") @db.TinyInt
+  ajusteEnganche            String?                                  @map("ajuste_enganche") @db.VarChar(20)
+  ajustePrecioVenta         String?                                  @map("ajuste_precio_venta") @db.VarChar(20)
+  altaPagoRecurrente        DateTime?                                @map("alta_pago_recurrente") @db.DateTime(0)
+  angazaAccounts            AngazaAccount[]
+  angazaPayments            AngazaPayment[]
+  authUserId                Int?                                     @map("auth_user_id") @db.UnsignedInt
+  bills                     Bill[]
+  bloqueo_confirmado        EnumFinancedSaleBloqueoConfirmado?
+  bloqueo_permanente        EnumFinancedSaleBloqueoPermanente?       @default(I)
+  bloqueoProgramado         DateTime?                                @map("bloqueo_programado") @db.DateTime(0)
+  canceledUserId            Int?                                     @map("canceled_user_id") @db.UnsignedInt
+  cashCountDetails          CashCountDetail?
+  codigoArtIccid            String?                                  @map("codigo_art_iccid") @db.VarChar(15)
+  codigoBloqueo             String?                                  @map("codigo_bloqueo") @db.VarChar(20)
+  comentarios               String?                                  @db.Text
+  comentariosDescuento      String?                                  @map("comentarios_descuento") @db.VarChar(50)
+  conektaPaymentTransacs    ConektaPaymentTransac[]
+  createdUserId             Int?                                     @map("created_user_id") @db.UnsignedInt
+  customerPagoRecurrente    String?                                  @map("customer_pago_recurrente") @db.VarChar(50)
+  customers                 Customer?                                @relation(fields: [customer_id], references: [id])
+  customer_id               Int?
+  desctoPagoOportuno        Int                                      @default(0) @map("descto_pago_oportuno") @db.TinyInt
+  descuentoEspecial         Int?                                     @map("descuento_especial") @db.UnsignedTinyInt
+  documents                 Document[]
+  enganche                  Decimal                                  @db.Decimal(6, 2)
+  estatus_bloqueo           EnumFinancedSaleEstatusBloqueo?          @default(A)
+  estatus_equipo            EnumFinancedSaleEstatusEquipo?
+  estatus_financ            EnumFinancedSaleEstatusFinanc?
+  fechaCancelo              DateTime?                                @map("fecha_cancelo") @db.DateTime(0)
+  fechaFinanc               DateTime?                                @map("fecha_financ") @db.Date
+  fechaPrimerPago           DateTime?                                @map("fecha_primer_pago") @db.Date
+  fechaRegistro             DateTime?                                @map("fecha_registro") @db.DateTime(0)
+  financedAccessories       FinancedAccessory[]
+  financedSalesLog          FinancedSalesLog[]
+  forceAdvancePayments      Int?                                     @default(0) @map("force_advance_payments") @db.TinyInt
+  formaPago                 String?                                  @map("forma_pago") @db.Char(2)
+  habilitar_pago_recurrente EnumFinancedSaleHabilitarPagoRecurrente? @default(I)
+  iccid                     String?                                  @db.VarChar(100)
+  id                        Int                                      @id @default(autoincrement()) @db.UnsignedInt
+  idPlan                    Int?                                     @map("id_plan")
+  imei                      BigInt                                   @db.UnsignedBigInt
+  imei2                     String?                                  @db.VarChar(20)
+  ine_verificado            EnumFinancedSaleIneVerificado?
+  items                     Item                                     @relation(fields: [item_id], references: [id])
+  item_id                   Int
+  kardex                    Kardex[]
+  loanedDevices             LoanedDevice[]
+  lockedDevBadCustomers     LockedDevBadCustomer[]
+  mensajeAdvertenciaVenta   String?                                  @map("mensaje_advertencia_venta") @db.VarChar(250)
+  modifiedPayments          ModifiedPayment[]
+  modifiedSalesclerks       ModifiedSalesclerk[]
+  montoDescuento            Decimal?                                 @map("monto_descuento") @db.Decimal(20, 15)
+  montoFinanciado           Decimal                                  @map("monto_financiado") @db.Decimal(20, 15)
+  montoPago                 Decimal                                  @map("monto_pago") @db.Decimal(20, 15)
+  montoPagoInicial          Decimal?                                 @map("monto_pago_inicial") @db.Decimal(20, 15)
+  msisdn                    String?                                  @db.VarChar(100)
+  numPagos                  Int                                      @map("num_pagos") @db.TinyInt
+  numPagosDescuento         String?                                  @map("num_pagos_descuento") @db.VarChar(100)
+  paycodePaymentTransacs    PaycodePaymentTransac[]
+  paymentAgreement          Decimal?                                 @map("payment_agreement") @db.Decimal(8, 2)
+  payments                  Payment[]
+  plazo                     EnumFinancedSalePlazo
+  porcentajeDescEng         Int?                                     @map("porcentaje_desc_eng") @db.UnsignedTinyInt
+  precioLista               Decimal                                  @map("precio_lista") @db.Decimal(8, 2)
+  promotionId               Int?                                     @map("promotion_id") @db.UnsignedInt
+  protectionCertActivations ProtectionCertActivation[]
+  protectionCerts           ProtectionCert?
+  proveedorBloqueo          String?                                  @map("proveedor_bloqueo") @db.VarChar(25)
+  proveedorPagoRecurrente   String?                                  @map("proveedor_pago_recurrente") @db.VarChar(60)
+  rangoFinalDescuento       DateTime?                                @map("rango_final_descuento") @db.Date
+  rangoInicialDescuento     DateTime?                                @map("rango_inicial_descuento") @db.Date
+  recurringPayments         RecurringPayment[]
+  rutaArchivoDescuento      String?                                  @map("ruta_archivo_descuento") @db.VarChar(250)
+  rutaFirma                 String?                                  @map("ruta_firma") @db.VarChar(500)
+  stripePaymentTransacs     StripePaymentTransac[]
+  tasaInteres               Decimal                                  @map("tasa_interes") @db.Decimal(20, 18)
+  tasaInteresAnual          Int                                      @map("tasa_interes_anual") @db.SmallInt
+  telefono                  String?                                  @db.VarChar(10)
+  timeToReconfigNextlock    DateTime?                                @map("time_to_reconfig_nextlock") @db.DateTime(0)
+  tokenPagoRecurrente       String?                                  @map("token_pago_recurrente") @db.VarChar(50)
+  ubicacion                 String?                                  @db.VarChar(250)
+  ubicacionLatitud          Decimal?                                 @map("ubicacion_latitud") @db.Decimal(10, 7)
+  ubicacionLongitud         Decimal?                                 @map("ubicacion_longitud") @db.Decimal(10, 7)
+  ubicacionMapa             String?                                  @map("ubicacion_mapa") @db.VarChar(250)
+  ultimaConexion            DateTime?                                @map("ultima_conexion") @db.DateTime(0)
+  ultimaLocacion            String?                                  @map("ultima_locacion") @db.VarChar(250)
+  unenrolledUserId          Int?                                     @map("unenrolled_user_id") @db.UnsignedInt
+  warehouses                Warehouse?                               @relation(fields: [warehouse_id], references: [id])
+  warehouse_id              Int?
+
+  @@index([customer_id], map: "financed_sales_customers_foreign")
+  @@index([item_id], map: "financed_sales_items_foreign")
+  @@index([warehouse_id], map: "financed_sales_warehouses_foreign")
+  @@map("financed_sales")
+}
+
+model FinancedSalesLog {
+  fechaUltimaEdicion DateTime     @default(now()) @map("fecha_ultima_edicion") @db.Timestamp(0)
+  financedSales      FinancedSale @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id   Int
+  id                 Int          @id @default(autoincrement()) @db.UnsignedInt
+  idUsrUltimaEdicion Int          @map("id_usr_ultima_edicion") @db.UnsignedInt
+  infoFinanc         String       @map("info_financ") @db.Text
+
+  @@index([financed_sale_id], map: "financed_sales_log_financed_sales_foreign")
+  @@map("financed_sales_log")
+}
+
+model ItemPrice {
+  comisionInmediata Int?                   @map("comision_inmediata") @db.UnsignedSmallInt
+  createdUserId     Int?                   @map("created_user_id") @db.UnsignedInt
+  descripcionArt    String                 @map("descripcion_art") @db.VarChar(50)
+  enganche          Int                    @db.UnsignedSmallInt
+  fechaLanzamiento  DateTime               @map("fecha_lanzamiento") @db.DateTime(0)
+  gamma             EnumItemPriceGamma     @default(SIN_INFORMACION)
+  id                Int                    @id @default(autoincrement()) @db.UnsignedInt
+  items             Item                   @relation(fields: [item_id], references: [id])
+  item_id           Int
+  modelo            String                 @db.VarChar(30)
+  precioVenta       Decimal                @map("precio_venta") @db.Decimal(8, 2)
+  tipo_venta        EnumItemPriceTipoVenta @default(FINANCIAMIENTO)
+
+  @@index([item_id], map: "item_prices_items_foreign")
+  @@map("item_prices")
+}
+
+model Item {
+  billDetails                                                             BillDetail[]
+  cashSaleDetails                                                         CashSaleDetail[]
+  categories                                                              Category?                  @relation(fields: [category_id], references: [id])
+  category_id                                                             Int?
+  codigoArt                                                               String                     @map("codigo_art") @db.VarChar(15)
+  createdUserId                                                           Int?                       @map("created_user_id") @db.UnsignedInt
+  descripcionArt                                                          String                     @map("descripcion_art") @db.VarChar(50)
+  estatus_art                                                             EnumItemEstatusArt
+  estimates                                                               Estimate[]
+  fechaModificado                                                         DateTime?                  @map("fecha_modificado") @db.DateTime(0)
+  fechaRegistro                                                           DateTime?                  @map("fecha_registro") @db.DateTime(0)
+  financedAccessories                                                     FinancedAccessory[]
+  financedSales                                                           FinancedSale[]
+  id                                                                      Int                        @id @default(autoincrement()) @db.UnsignedInt
+  ignorarPlazos                                                           String?                    @map("ignorar_plazos") @db.VarChar(20)
+  itemPrices                                                              ItemPrice[]
+  kardex                                                                  Kardex[]
+  kardexSeries                                                            KardexSery[]
+  loanedDevices                                                           LoanedDevice[]
+  marca                                                                   String?                    @db.VarChar(100)
+  measuringUnits                                                          MeasuringUnit?             @relation(fields: [measurement_unit_id], references: [id])
+  measurement_unit_id                                                     Int?
+  modelo                                                                  String?                    @db.VarChar(100)
+  nombreArchivo                                                           String?                    @map("nombre_archivo") @db.VarChar(100)
+  ofrecer_planes                                                          EnumItemOfrecerPlanes
+  protectionCertActivationsProtectionCertActivationsItemIdToitems         ProtectionCertActivation[] @relation(name: "itemsProtectionCertActivationsItemIdToitems")
+  protectionCertActivationsProtectionCertActivationsReservedItemIdToitems ProtectionCertActivation[] @relation(name: "itemsProtectionCertActivationsReservedItemIdToitems")
+  rutaArchivo                                                             String?                    @map("ruta_archivo") @db.VarChar(150)
+  stock                                                                   Stock[]
+  stockSeries                                                             StockSery[]
+  tipo_art                                                                EnumItemTipoArt
+  tipo_inventario                                                         EnumItemTipoInventario
+  updatedUserId                                                           Int?                       @map("updated_user_id") @db.UnsignedInt
+
+  @@index([category_id], map: "items_categories_foreign")
+  @@index([measurement_unit_id], map: "items_measuring_units_foreign")
+  @@map("items")
+}
+
+model Kardex {
+  cantUnidades     Decimal                  @map("cant_unidades") @db.Decimal(12, 5)
+  cashSales        CashSale?                @relation(fields: [cash_sale_id], references: [id])
+  cash_sale_id     Int?
+  financedSales    FinancedSale?            @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id Int?
+  id               Int                      @id @default(autoincrement()) @db.UnsignedInt
+  items            Item                     @relation(fields: [item_id], references: [id])
+  item_id          Int
+  ivaUnidad        Decimal?                 @map("iva_unidad") @db.Decimal(16, 4)
+  payments         Payment?                 @relation(fields: [payment_id], references: [id])
+  payment_id       Int?
+  personalLoans    PersonalLoan?            @relation(fields: [personal_loan_id], references: [id])
+  personal_loan_id Int?
+  precioUnidad     Decimal?                 @map("precio_unidad") @db.Decimal(16, 4)
+  tipo_inventario  EnumKardexTipoInventario
+  transactions     Transaction              @relation(fields: [transaction_id], references: [id])
+  transaction_id   Int
+  warehouses       Warehouse                @relation(fields: [warehouse_id], references: [id])
+  warehouse_id     Int
+
+  @@unique([transaction_id, item_id], map: "kardex_transaction_id_item_id_unique")
+  @@index([cash_sale_id], map: "kardex_cash_sales_foreign")
+  @@index([financed_sale_id], map: "kardex_financed_sales_foreign")
+  @@index([item_id], map: "kardex_items_foreign")
+  @@index([payment_id], map: "kardex_payments_foreign")
+  @@index([personal_loan_id], map: "kardex_personal_loans_foreign")
+  @@index([warehouse_id], map: "kardex_warehouses_foreign")
+  @@map("kardex")
+}
+
+model KardexSery {
+  codigoBloqueo  String?     @map("codigo_bloqueo") @db.VarChar(20)
+  id             Int         @id @default(autoincrement()) @db.UnsignedInt
+  items          Item        @relation(fields: [item_id], references: [id])
+  item_id        Int
+  otraSerie      String?     @map("otra_serie") @db.VarChar(30)
+  serialCode     String      @map("serial_code") @db.VarChar(30)
+  transactions   Transaction @relation(fields: [transaction_id], references: [id])
+  transaction_id Int
+  warehouses     Warehouse   @relation(fields: [warehouse_id], references: [id])
+  warehouse_id   Int
+
+  @@index([item_id], map: "kardex_series_items_foreign")
+  @@index([transaction_id, item_id, serialCode], map: "kardex_series_transaction_id_item_id_serial_code_unique")
+  @@index([warehouse_id], map: "kardex_series_warehouses_foreign")
+  @@map("kardex_series")
+}
+
+model LoanAmount {
+  amount               Decimal               @default(0.00) @db.Decimal(10, 2)
+  id                   Int                   @id @default(autoincrement()) @db.UnsignedInt
+  loyaltyPromotion     String?               @map("loyalty_promotion") @db.Char(2)
+  warehouseLoanAmounts WarehouseLoanAmount[]
+
+  @@map("loan_amounts")
+}
+
+model LoanedDevice {
+  codigoSerie                             String       @map("codigo_serie") @db.VarChar(30)
+  comentarios                             String       @db.VarChar(500)
+  customers                               Customer     @relation(fields: [customer_id], references: [id])
+  customer_id                             Int
+  fechaDevolucion                         DateTime?    @map("fecha_devolucion") @db.DateTime(0)
+  fechaRegistro                           DateTime     @map("fecha_registro") @db.DateTime(0)
+  financedSales                           FinancedSale @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id                        Int
+  id                                      Int          @id @default(autoincrement()) @db.UnsignedInt
+  items                                   Item         @relation(fields: [item_id], references: [id])
+  item_id                                 Int
+  loanStatus                              String       @map("loan_status") @db.VarChar(2)
+  usersLoanedDevicesCreatedUserIdTousers  UserModel    @map("users_loaned_devices_created_user_idTousers") @relation(name: "loanedDevicesLoanedDevicesCreatedUserIdTousers", fields: [created_user_id], references: [id])
+  created_user_id                         Int          @map("users_loaned_devices_created_user_idTousers")
+  usersLoanedDevicesReturnedUserIdTousers UserModel?   @map("users_loaned_devices_returned_user_idTousers") @relation(name: "loanedDevicesLoanedDevicesReturnedUserIdTousers", fields: [returned_user_id], references: [id])
+  returned_user_id                        Int?         @map("users_loaned_devices_returned_user_idTousers")
+
+  @@index([customer_id], map: "loaned_devices_customers_foreign")
+  @@index([financed_sale_id, loanStatus], map: "loaned_devices_financed_sale_id_loan_status_index")
+  @@index([item_id], map: "loaned_devices_items_foreign")
+  @@index([returned_user_id], map: "loaned_devices_users_devolucion_foreign")
+  @@index([created_user_id], map: "loaned_devices_users_foreign")
+  @@map("loaned_devices")
+}
+
+model LockedDevBadCustomer {
+  codigoBloqueoMoroso String?                              @map("codigo_bloqueo_moroso") @db.VarChar(20)
+  customers           Customer?                            @relation(fields: [customer_id], references: [id])
+  customer_id         Int?
+  deviceId            String                               @map("device_id") @db.VarChar(20)
+  fechaBloqueado      DateTime                             @map("fecha_bloqueado") @db.DateTime(0)
+  fechaDesbloqueado   DateTime?                            @map("fecha_desbloqueado") @db.DateTime(0)
+  financedSales       FinancedSale?                        @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id    Int?
+  forced_status       EnumLockedDevBadCustomerForcedStatus
+  id                  Int                                  @id @default(autoincrement()) @db.UnsignedInt
+
+  @@index([customer_id], map: "locked_dev_bad_customers_customers_foreign")
+  @@index([deviceId], map: "locked_dev_bad_customers_device_id_index")
+  @@index([financed_sale_id, forced_status], map: "locked_dev_bad_customers_financed_sale_id_forced_status_index")
+  @@map("locked_dev_bad_customers")
+}
+
+model MandatoryDocument {
+  documentTypes          DocumentType?           @relation(fields: [document_type_id], references: [id])
+  document_type_id       Int?
+  id                     Int                     @id @default(autoincrement()) @db.UnsignedInt
+  processType            String?                 @map("process_type") @db.VarChar(15)
+  relationship           String?                 @db.VarChar(15)
+  warehouseMandatoryDocs WarehouseMandatoryDoc[]
+
+  @@index([document_type_id], map: "mandatory_documents_document_types_foreign")
+  @@map("mandatory_documents")
+}
+
+model MeasuringUnit {
+  claveSatUm       String? @map("clave_sat_um") @db.VarChar(3)
+  descripcionUm    String  @map("descripcion_um") @db.VarChar(50)
+  descripcionUmSat String? @map("descripcion_um_sat") @db.VarChar(150)
+  id               Int     @id @default(autoincrement()) @db.UnsignedInt
+  items            Item[]
+  umCfdi           String? @map("um_cfdi") @db.VarChar(20)
+  unidadMedida     String  @map("unidad_medida") @db.VarChar(5)
+
+  @@map("measuring_units")
+}
+
+model ModifiedPayment {
+  comentarios        String?                         @db.VarChar(100)
+  estatus_pago       EnumModifiedPaymentEstatusPago?
+  fechaHoraRegistro  DateTime?                       @map("fecha_hora_registro") @db.DateTime(0)
+  fechaUltimaEdicion DateTime?                       @map("fecha_ultima_edicion") @db.DateTime(0)
+  financedSales      FinancedSale?                   @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id   Int?
+  id                 Int                             @id @default(autoincrement()) @db.UnsignedInt
+  idUsrUltimaEdicion Int?                            @map("id_usr_ultima_edicion")
+  infoPago           String                          @map("info_pago") @db.MediumText
+  numPago            Int?                            @map("num_pago") @db.TinyInt
+  payments           Payment?                        @relation(fields: [payment_id], references: [id])
+  payment_id         Int?
+
+  @@index([financed_sale_id], map: "modified_payments_financed_sales_foreign")
+  @@index([payment_id], map: "modified_payments_payments_foreign")
+  @@map("modified_payments")
+}
+
+model ModifiedPermission {
+  accion        String     @db.VarChar(20)
+  createdUserId Int?       @map("created_user_id") @db.UnsignedInt
+  fechaRegistro DateTime?  @map("fecha_registro") @db.DateTime(0)
+  id            Int        @id @default(autoincrement()) @db.UnsignedInt
+  permissions   Permission @relation(fields: [permission_id], references: [id])
+  permission_id Int
+  users         UserModel  @relation(fields: [user_id], references: [id])
+  user_id       Int
+
+  @@index([permission_id], map: "modified_permissions_permissions_foreign")
+  @@index([user_id], map: "modified_permissions_users_foreign")
+  @@map("modified_permissions")
+}
+
+model ModifiedSalesclerk {
+  financedSales       FinancedSale? @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id    Int?
+  id                  Int           @id @default(autoincrement()) @db.UnsignedInt
+  newSalesclerkUserId Int?          @map("new_salesclerk_user_id") @db.UnsignedInt
+  oldSalesclerkUserId Int?          @map("old_salesclerk_user_id") @db.UnsignedInt
+  personalLoanId      Int?          @map("personal_loan_id") @db.UnsignedInt
+  updatedAt           DateTime?     @map("updated_at") @db.Timestamp(0)
+  updatedUserId       Int?          @map("updated_user_id") @db.UnsignedInt
+
+  @@index([financed_sale_id], map: "modified_salesclerks_financed_sales_foreign")
+  @@map("modified_salesclerks")
+}
+
+model NubariumOtherValidation {
+  correlationId String   @map("correlation_id") @db.VarChar(40)
+  correo        String   @db.VarChar(50)
+  customerId    Int      @map("customer_id") @db.UnsignedInt
+  eaAdvice      String   @map("ea_advice") @db.VarChar(80)
+  eaAdviceId    String   @map("ea_advice_id") @db.VarChar(40)
+  eaReason      String   @map("ea_reason") @db.VarChar(100)
+  eaReasonId    String   @map("ea_reason_id") @db.VarChar(40)
+  eaRiskBand    String   @map("ea_risk_band") @db.VarChar(80)
+  eaRiskBandId  String   @map("ea_risk_band_id") @db.VarChar(40)
+  eaScore       String   @map("ea_score") @db.VarChar(40)
+  eaStatusId    String   @map("ea_status_id") @db.VarChar(40)
+  fechaRegistro DateTime @map("fecha_registro") @db.DateTime(0)
+  fraudRisk     String   @map("fraud_risk") @db.VarChar(40)
+  fraudType     String?  @map("fraud_type") @db.VarChar(40)
+  id            Int      @id @default(autoincrement()) @db.UnsignedInt
+  telefono      String   @db.VarChar(10)
+
+  @@map("nubarium_other_validations")
+}
+
+model NubariumValidation {
+  claveElectorCliente String    @map("clave_elector_cliente") @db.VarChar(20)
+  fecha               DateTime? @default(now()) @db.Timestamp(0)
+  id                  Int       @id @default(autoincrement()) @db.UnsignedInt
+  users               UserModel @relation(fields: [user_id], references: [id])
+  user_id             Int
+  warehouses          Warehouse @relation(fields: [warehouse_id], references: [id])
+  warehouse_id        Int
+
+  @@index([user_id], map: "nubarium_validations_users_foreign")
+  @@index([warehouse_id], map: "nubarium_validations_warehouses_foreign")
+  @@map("nubarium_validations")
+}
+
+model NubariumValidationsLog {
+  fecha                DateTime @default(now()) @db.Timestamp(0)
+  id                   Int      @id @default(autoincrement()) @db.UnsignedInt
+  idPasoValidacion     Int      @map("id_paso_validacion")
+  intentoPaso          Int?     @map("intento_paso")
+  nubariumValidationId Int      @map("nubarium_validation_id") @db.UnsignedInt
+  respuesta            String   @db.Text
+  status               String   @db.VarChar(10)
+
+  @@map("nubarium_validations_log")
+}
+
+model NuovoApiLog {
+  callDate         DateTime  @map("call_date") @db.Date
+  calledMethod     String    @map("called_method") @db.VarChar(50)
+  callTime         DateTime  @map("call_time") @db.Time(0)
+  calltrace        String    @db.Text
+  dataSend         String?   @map("data_send") @db.Text
+  headers          String    @db.VarChar(150)
+  id               Int       @id @default(autoincrement()) @db.UnsignedInt
+  response         String?   @db.Text
+  responseDatetime DateTime? @map("response_datetime") @db.DateTime(0)
+  url              String    @db.VarChar(120)
+
+  @@index([calledMethod, callTime], map: "nuovo_api_log_called_method_call_time_index")
+  @@index([calledMethod], map: "nuovo_api_log_called_method_index")
+  @@map("nuovo_api_log")
+}
+
+model NuovoHistorical {
+  createdAt         DateTime                  @map("created_at") @db.DateTime(0)
+  deviceId          String                    @map("device_id") @db.VarChar(8)
+  id                Int                       @id @default(autoincrement()) @db.UnsignedInt
+  imeiNo            String?                   @map("imei_no") @db.Char(15)
+  imeiNo2           String?                   @map("imei_no2") @db.Char(15)
+  lastConnectedAt   DateTime?                 @map("last_connected_at") @db.DateTime(0)
+  locationAddress   String?                   @map("location_address") @db.VarChar(250)
+  locationLatitude  Decimal?                  @map("location_latitude") @db.Decimal(10, 7)
+  locationLongitude Decimal?                  @map("location_longitude") @db.Decimal(10, 7)
+  locked            EnumNuovoHistoricalLocked
+  make              String                    @db.VarChar(10)
+  model             String                    @db.VarChar(20)
+  nextLockDate      DateTime?                 @map("next_lock_date") @db.DateTime(0)
+  serialNo          String?                   @map("serial_no") @db.VarChar(30)
+  state             EnumNuovoHistoricalState?
+  status            String                    @db.VarChar(2)
+
+  @@index([createdAt, deviceId], map: "nuovo_historicals_created_at_device_id_index")
+  @@index([deviceId], map: "nuovo_historicals_device_id_index")
+  @@index([imeiNo2], map: "nuovo_historicals_imei_no2_index")
+  @@index([imeiNo], map: "nuovo_historicals_imei_no_index")
+  @@index([serialNo], map: "nuovo_historicals_serial_no_index")
+  @@map("nuovo_historicals")
+}
+
+model OtherCompaniesPayment {
+  abonoExtra                     Decimal                              @default(0.000000000000000) @map("abono_extra") @db.Decimal(20, 15)
+  cambioDevuelto                 Decimal?                             @map("cambio_devuelto") @db.Decimal(20, 15)
+  cantidadRecibida               Decimal                              @map("cantidad_recibida") @db.Decimal(20, 15)
+  capitalPagado                  Decimal                              @map("capital_pagado") @db.Decimal(20, 15)
+  codigoBloqueo                  String?                              @map("codigo_bloqueo") @db.VarChar(20)
+  conektaPaymentTransacs         ConektaPaymentTransac?               @relation(fields: [conekta_payment_transaction_id], references: [id])
+  conekta_payment_transaction_id Int?
+  desctoAplicado                 Decimal                              @map("descto_aplicado") @db.Decimal(20, 15)
+  desdeWebhook                   Boolean?                             @map("desde_webhook") @db.Bit(1)
+  estatus_pago                   EnumOtherCompaniesPaymentEstatusPago @default(A)
+  fechaPago                      DateTime                             @map("fecha_pago") @db.Date
+  fechaProxVenc                  DateTime?                            @map("fecha_prox_venc") @db.Date
+  fechaVenc                      DateTime?                            @map("fecha_venc") @db.Date
+  formaPago                      String?                              @map("forma_pago") @db.VarChar(3)
+  horaPago                       DateTime                             @map("hora_pago") @db.Time(0)
+  id                             Int                                  @id @default(autoincrement()) @db.UnsignedInt
+  interesPagado                  Decimal                              @map("interes_pagado") @db.Decimal(20, 15)
+  numPago                        Int                                  @map("num_pago") @db.TinyInt
+  opcionCambio                   String?                              @map("opcion_cambio") @db.Char(2)
+  opcionPago                     String?                              @map("opcion_pago") @db.Char(2)
+  pagosAdelantados               Int?                                 @map("pagos_adelantados") @db.TinyInt
+  receivedUserId                 Int?                                 @map("received_user_id") @db.UnsignedInt
+  stripePaymentTransacs          StripePaymentTransac?                @relation(fields: [stripe_payment_transaction_id], references: [id])
+  stripe_payment_transaction_id  Int?
+  tipo_pago                      EnumOtherCompaniesPaymentTipoPago    @default(P)
+  warehouses                     Warehouse                            @relation(fields: [warehouse_id], references: [id])
+  warehouse_id                   Int
+
+  @@index([conekta_payment_transaction_id], map: "other_companies_payments_conekta_payment_transacs_foreign")
+  @@index([stripe_payment_transaction_id], map: "other_companies_payments_stripe_payment_transacs_foreign")
+  @@index([warehouse_id], map: "other_companies_payments_warehouses_foreign")
+  @@map("other_companies_payments")
+}
+
+model PaycodeApiLog {
+  callDate                       DateTime               @map("call_date") @db.Date
+  calledMethod                   String                 @map("called_method") @db.VarChar(50)
+  callTime                       DateTime               @map("call_time") @db.Time(0)
+  calltrace                      String?                @db.Text
+  dataSend                       String?                @map("data_send") @db.Text
+  headers                        String                 @db.VarChar(1000)
+  id                             Int                    @id @default(autoincrement()) @db.UnsignedInt
+  paycodePaymentTransacs         PaycodePaymentTransac? @relation(fields: [paycode_payment_transaction_id], references: [id])
+  paycode_payment_transaction_id Int?
+  response                       String?                @db.Text
+  responseDatetime               DateTime?              @map("response_datetime") @db.DateTime(0)
+  url                            String                 @db.VarChar(300)
+
+  @@index([paycode_payment_transaction_id], map: "paycode_api_log_paycode_payment_transacs_foreign")
+  @@map("paycode_api_log")
+}
+
+model PaycodePaymentTransac {
+  airtimeRecharges        AirtimeRecharge[]
+  bank                    String?             @db.VarChar(30)
+  beneficiary             String?             @db.VarChar(30)
+  clabe                   String?             @db.VarChar(30)
+  concept                 String?             @db.VarChar(30)
+  datosPago               String?             @map("datos_pago") @db.Text
+  displayMessage          String?             @map("display_message") @db.VarChar(100)
+  estatusCobro            String              @default("E") @map("estatus_cobro") @db.Char(1)
+  fechaRegistro           DateTime            @map("fecha_registro") @db.DateTime(0)
+  financedSales           FinancedSale        @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id        Int
+  habilitarPagoRecurrente Int?                @map("habilitar_pago_recurrente") @db.TinyInt
+  id                      Int                 @id @default(autoincrement()) @db.UnsignedInt
+  paycodeApiLog           PaycodeApiLog[]
+  paycodeWebhookLog       PaycodeWebhookLog[]
+  payments                Payment[]
+  recurringPayments       RecurringPayment[]
+  referenceNumber         String              @map("reference_number") @db.VarChar(15)
+  trackCode               String?             @map("track_code") @db.VarChar(15)
+
+  @@index([financed_sale_id], map: "paycode_payment_transacs_financed_sales_foreign")
+  @@index([referenceNumber], map: "paycode_payment_transacs_reference_number_index")
+  @@map("paycode_payment_transacs")
+}
+
+model PaycodeWebhookLog {
+  fechaRegistro                  DateTime?              @default(now()) @map("fecha_registro") @db.DateTime(0)
+  id                             Int                    @id @default(autoincrement()) @db.UnsignedInt
+  paycodePaymentTransacs         PaycodePaymentTransac? @relation(fields: [paycode_payment_transaction_id], references: [id])
+  paycode_payment_transaction_id Int?
+  response                       String?                @db.Text
+
+  @@index([paycode_payment_transaction_id], map: "paycode_webhook_log_paycode_payment_transacs_foreign")
+  @@map("paycode_webhook_log")
+}
+
+model PaymentInterest {
+  id                     Int        @id @default(autoincrement()) @db.UnsignedInt
+  interesAnual           Int?       @map("interes_anual") @db.MediumInt
+  interesSemanal         Decimal?   @map("interes_semanal") @db.Decimal(20, 18)
+  interesSemanalMultiplo Decimal?   @map("interes_semanal_multiplo") @db.Decimal(20, 18)
+  paymentPeriodId        Int        @map("payment_period_id") @db.UnsignedTinyInt
+  rangoFinal             Decimal    @default(0.00) @map("rango_final") @db.Decimal(10, 2)
+  rangoInicial           Decimal    @default(0.00) @map("rango_inicial") @db.Decimal(10, 2)
+  warehouses             Warehouse? @relation(fields: [warehouse_id], references: [id])
+  warehouse_id           Int?
+
+  @@unique([warehouse_id, paymentPeriodId], map: "payment_interests_warehouse_id_payment_period_id_unique")
+  @@map("payment_interests")
+}
+
+model PaymentPeriod {
+  categoria_plazo     EnumPaymentPeriodCategoriaPlazo? @default(D)
+  id                  Int                              @id @default(autoincrement()) @db.UnsignedInt
+  interesAnualGeneral Int                              @map("interes_anual_general") @db.UnsignedSmallInt
+  meses               Int                              @db.UnsignedTinyInt
+  plazo               Int                              @db.UnsignedTinyInt
+  rangoFinal          Decimal                          @default(0.00) @map("rango_final") @db.Decimal(10, 2)
+  rangoInicial        Decimal                          @default(0.00) @map("rango_inicial") @db.Decimal(10, 2)
+  tipo_plazo          EnumPaymentPeriodTipoPlazo
+
+  @@map("payment_periods")
+}
+
+model PaymentWay {
+  descripcion  String  @db.VarChar(50)
+  id           Int     @id @default(autoincrement()) @db.UnsignedInt
+  numFormaPago String  @map("num_forma_pago") @db.Char(2)
+  paymentWay   String? @unique @map("payment_way") @db.Char(2)
+
+  @@map("payment_ways")
+}
+
+model Payment {
+  abonoExtra                     Decimal                @default(0.000000000000000) @map("abono_extra") @db.Decimal(20, 15)
+  bills                          Bill[]
+  cambioDevuelto                 Decimal?               @map("cambio_devuelto") @db.Decimal(20, 15)
+  canceledUserId                 Int?                   @map("canceled_user_id") @db.UnsignedInt
+  cantidadRecibida               Decimal                @map("cantidad_recibida") @db.Decimal(20, 15)
+  capitalPagado                  Decimal                @map("capital_pagado") @db.Decimal(20, 15)
+  cashCountDetails               CashCountDetail?
+  comentariosPago                String?                @map("comentarios_pago") @db.VarChar(500)
+  comprobantePago                String?                @map("comprobante_pago") @db.VarChar(100)
+  conektaPaymentTransacs         ConektaPaymentTransac? @relation(fields: [conekta_payment_transaction_id], references: [id])
+  conekta_payment_transaction_id Int?
+  customerId                     Int?                   @map("customer_id") @db.UnsignedInt
+  desctoAplicado                 Decimal                @map("descto_aplicado") @db.Decimal(20, 15)
+  desdeWebhook                   Boolean?               @map("desde_webhook") @db.Bit(1)
+  documents                      Document[]
+  fechaCancelo                   DateTime?              @map("fecha_cancelo") @db.DateTime(0)
+  fechaPago                      DateTime               @map("fecha_pago") @db.Date
+  fechaProxVenc                  DateTime?              @map("fecha_prox_venc") @db.Date
+  fechaVenc                      DateTime?              @map("fecha_venc") @db.Date
+  financedSales                  FinancedSale?          @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id               Int?
+  formaPago                      String?                @map("forma_pago") @db.VarChar(3)
+  horaPago                       DateTime               @map("hora_pago") @db.Time(0)
+  id                             Int                    @id @default(autoincrement()) @db.UnsignedInt
+  interesPagado                  Decimal                @map("interes_pagado") @db.Decimal(20, 15)
+  kardex                         Kardex[]
+  modifiedPayments               ModifiedPayment[]
+  opcionCambio                   String?                @map("opcion_cambio") @db.Char(2)
+  opcionPago                     String?                @map("opcion_pago") @db.Char(2)
+  pagoRecurrente                 Boolean?               @map("pago_recurrente") @db.Bit(1)
+  pagosAdelantados               Int?                   @map("pagos_adelantados") @db.TinyInt
+  pathFileDiscount               String?                @map("path_file_discount") @db.VarChar(250)
+  paycodePaymentTransacs         PaycodePaymentTransac? @relation(fields: [paycode_payment_transaction_id], references: [id])
+  paycode_payment_transaction_id Int?
+  payCount                       Int                    @map("pay_count") @db.TinyInt
+  pay_status                     EnumPaymentPayStatus   @default(A)
+  pay_type                       EnumPaymentPayType     @default(P)
+  percentageDiscountDownPayment  Int?                   @map("percentage_discount_down_payment") @db.UnsignedTinyInt
+  personalLoans                  PersonalLoan?          @relation(fields: [personal_loan_id], references: [id])
+  personal_loan_id               Int?
+  promotionId                    Int?                   @map("promotion_id") @db.UnsignedInt
+  receivedUserId                 Int?                   @map("received_user_id") @db.UnsignedInt
+  stripePaymentTransacs          StripePaymentTransac?  @relation(fields: [stripe_payment_transaction_id], references: [id])
+  stripe_payment_transaction_id  Int?
+  warehouses                     Warehouse              @relation(fields: [warehouse_id], references: [id])
+  warehouse_id                   Int
+
+  @@index([conekta_payment_transaction_id], map: "payments_conekta_payment_transacs_foreign")
+  @@index([financed_sale_id, pay_status], map: "payments_financed_sale_id_pay_status_index")
+  @@index([financed_sale_id, pay_type, payCount], map: "payments_financed_sale_id_pay_type_pay_count_index")
+  @@index([financed_sale_id, pay_type, payCount, pay_status], map: "payments_financed_sale_id_pay_type_pay_count_pay_status_index")
+  @@index([paycode_payment_transaction_id], map: "payments_paycode_payment_transacs_foreign")
+  @@index([personal_loan_id, pay_type, payCount, pay_status], map: "payments_personal_loan_id_pay_type_pay_count_pay_status_index")
+  @@index([stripe_payment_transaction_id], map: "payments_stripe_payment_transacs_foreign")
+  @@index([warehouse_id], map: "payments_warehouses_foreign")
+  @@map("payments")
+}
+
+model Permission {
+  descripcion         String               @db.VarChar(100)
+  id                  Int                  @id @default(autoincrement()) @db.UnsignedInt
+  modifiedPermissions ModifiedPermission[]
+  userPermissions     UserPermission[]
+
+  @@map("permissions")
+}
+
+model PersonalLoan {
+  codigoBloqueo         String?                               @map("codigo_bloqueo") @db.VarChar(20)
+  comentarios           String?                               @db.Text
+  customers             Customer                              @relation(fields: [customer_id], references: [id])
+  customer_id           Int
+  deletedUserId         Int?                                  @map("deleted_user_id") @db.UnsignedInt
+  desctoPagoOportuno    Int                                   @default(0) @map("descto_pago_oportuno") @db.TinyInt
+  estatus_prestamo      EnumPersonalLoanEstatusPrestamo?
+  fechaCancelacion      DateTime?                             @map("fecha_cancelacion") @db.DateTime(0)
+  fechaPrestamo         DateTime?                             @map("fecha_prestamo") @db.Date
+  fechaPrimerPago       DateTime                              @map("fecha_primer_pago") @db.Date
+  fechaRegistro         DateTime                              @map("fecha_registro") @db.DateTime(0)
+  id                    Int                                   @id @default(autoincrement()) @db.UnsignedInt
+  kardex                Kardex[]
+  montoFinanciado       Decimal                               @map("monto_financiado") @db.Decimal(7, 2)
+  montoPago             Decimal                               @map("monto_pago") @db.Decimal(20, 15)
+  montoPagoInicial      Decimal?                              @map("monto_pago_inicial") @db.Decimal(20, 15)
+  payments              Payment[]
+  plazo                 Int                                   @db.TinyInt
+  requestedUserId       Int?                                  @map("requested_user_id") @db.UnsignedInt
+  tasaInteres           Decimal                               @map("tasa_interes") @db.Decimal(20, 18)
+  tasaInteresAnual      Int                                   @map("tasa_interes_anual") @db.SmallInt
+  telefonoEnvioToken    String?                               @map("telefono_envio_token") @db.VarChar(10)
+  tipo_plazo            EnumPersonalLoanTipoPlazo
+  tokenEnviado          String?                               @map("token_enviado") @db.VarChar(5)
+  updatedAt             DateTime?                             @map("updated_at") @db.DateTime(0)
+  updatedUserId         Int?                                  @map("updated_user_id") @db.UnsignedInt
+  users                 UserModel                             @relation(fields: [created_user_id], references: [id])
+  created_user_id       Int
+  validaciones_saltadas EnumPersonalLoanValidacionesSaltadas? @default(N)
+  vendorLock            String?                               @map("vendor_lock") @db.VarChar(25)
+  warehouses            Warehouse                             @relation(fields: [warehouse_id], references: [id])
+  warehouse_id          Int
+  warningAlert          String?                               @map("warning_alert") @db.VarChar(300)
+
+  @@index([customer_id], map: "personal_loans_customers_foreign")
+  @@index([warehouse_id], map: "personal_loans_warehouses_foreign")
+  @@index([created_user_id], map: "personal_users_foreign")
+  @@map("personal_loans")
+}
+
+model Promotion {
+  descripccionDescuento String?                    @map("descripccion_descuento") @db.VarChar(50)
+  habilitado            EnumPromotionHabilitado    @default(H)
+  id                    Int                        @id @default(autoincrement()) @db.UnsignedInt
+  montoDescuento        Decimal                    @default(0.00) @map("monto_descuento") @db.Decimal(7, 2)
+  opcionesDescuento     String?                    @map("opciones_descuento") @db.VarChar(1000)
+  porcentajeDescuento   Decimal                    @default(0.00) @map("porcentaje_descuento") @db.Decimal(7, 2)
+  tipo_descuento        EnumPromotionTipoDescuento @default(P)
+
+  @@map("promotions")
+}
+
+model ProtectionCertActivation {
+  authUserId                                          Int?                                                @map("auth_user_id") @db.UnsignedInt
+  codigoBloqueo                                       String?                                             @map("codigo_bloqueo") @db.VarChar(20)
+  codigoBloqueoApartado                               String?                                             @map("codigo_bloqueo_apartado") @db.VarChar(20)
+  codigoSerie                                         String?                                             @map("codigo_serie") @db.VarChar(30)
+  codigoSerieApartado                                 String?                                             @map("codigo_serie_apartado") @db.VarChar(30)
+  comentario                                          String?                                             @db.VarChar(500)
+  customers                                           Customer                                            @relation(fields: [customer_id], references: [id])
+  customer_id                                         Int
+  deductPaymentId                                     Int?                                                @map("deduct_payment_id") @db.UnsignedInt
+  devolvioEquipoApartado                              String?                                             @map("devolvio_equipo_apartado") @db.VarChar(500)
+  diffPaymentId                                       Int?                                                @map("diff_payment_id") @db.UnsignedInt
+  estatus_bloqueo_apartado                            EnumProtectionCertActivationEstatusBloqueoApartado?
+  estatusCertProtec                                   String                                              @map("estatus_cert_protec") @db.VarChar(3)
+  estatusReparacion                                   String?                                             @map("estatus_reparacion") @db.VarChar(3)
+  fechaAct                                            DateTime                                            @map("fecha_act") @db.Date
+  fechaAutorizacion                                   DateTime?                                           @map("fecha_autorizacion") @db.DateTime(0)
+  fechaUltActualizacion                               DateTime?                                           @map("fecha_ult_actualizacion") @db.DateTime(0)
+  financedSales                                       FinancedSale                                        @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id                                    Int
+  id                                                  Int                                                 @id @default(autoincrement()) @db.UnsignedInt
+  idUsrAct                                            Int                                                 @map("id_usr_act") @db.UnsignedInt
+  itemsProtectionCertActivationsItemIdToitems         Item?                                               @relation(name: "itemsProtectionCertActivationsItemIdToitems", fields: [item_id], references: [id])
+  item_id                                             Int?
+  itemsProtectionCertActivationsReservedItemIdToitems Item?                                               @relation(name: "itemsProtectionCertActivationsReservedItemIdToitems", fields: [reserved_item_id], references: [id])
+  reserved_item_id                                    Int?
+  pagoDeducible                                       Decimal?                                            @map("pago_deducible") @db.Decimal(7, 2)
+  pagoDiferencia                                      Decimal?                                            @map("pago_diferencia") @db.Decimal(7, 2)
+  precioLista                                         Decimal?                                            @map("precio_lista") @db.Decimal(7, 2)
+  precioListaApartado                                 Decimal?                                            @map("precio_lista_apartado") @db.Decimal(8, 2)
+  precioReparacion                                    Decimal?                                            @map("precio_reparacion") @db.Decimal(7, 2)
+  protectionCertId                                    Int                                                 @map("protection_cert_id") @db.UnsignedInt
+  tipoProtec                                          String                                              @map("tipo_protec") @db.VarChar(3)
+  updatedUserId                                       Int?                                                @map("updated_user_id") @db.UnsignedInt
+  warehouses                                          Warehouse?                                          @relation(fields: [warehouse_id], references: [id])
+  warehouse_id                                        Int?
+
+  @@index([customer_id], map: "protection_cert_activations_customers_foreign")
+  @@index([financed_sale_id], map: "protection_cert_activations_financed_sales_foreign")
+  @@index([item_id], map: "protection_cert_activations_items_foreign")
+  @@index([reserved_item_id], map: "protection_cert_activations_reserved_item_id_foreign")
+  @@index([warehouse_id], map: "protection_cert_activations_warehouses_foreign")
+  @@map("protection_cert_activations")
+}
+
+model ProtectionCertStatus {
+  descripEstatusCertProtec String @map("descrip_estatus_cert_protec") @db.VarChar(120)
+  estatusCertProtec        String @map("estatus_cert_protec") @db.VarChar(3)
+  id                       Int    @id @default(autoincrement()) @db.UnsignedInt
+
+  @@map("protection_cert_statuses")
+}
+
+model ProtectionCert {
+  certFolio         Int                                @map("cert_folio") @db.UnsignedSmallInt
+  createdUserId     Int?                               @map("created_user_id") @db.UnsignedInt
+  customers         Customer?                          @relation(fields: [customer_id], references: [id])
+  customer_id       Int?
+  estatus_cert      EnumProtectionCertEstatusCert      @default(A)
+  fechaCancelacion  DateTime?                          @map("fecha_cancelacion") @db.Date
+  fechaRegistro     DateTime?                          @map("fecha_registro") @db.DateTime(0)
+  financedSales     FinancedSale                       @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id  Int                                @unique
+  id                Int                                @id @default(autoincrement()) @db.UnsignedInt
+  motivoCancelacion String?                            @map("motivo_cancelacion") @db.VarChar(10)
+  protec_activadas  EnumProtectionCertProtecActivadas? @default(NN)
+  users             UserModel?                         @relation(fields: [updated_user_id], references: [id])
+  updated_user_id   Int?
+  warehouses        Warehouse                          @relation(fields: [warehouse_id], references: [id])
+  warehouse_id      Int
+
+  @@unique([warehouse_id, certFolio], map: "protection_certs_warehouse_id_cert_folio_unique")
+  @@index([customer_id], map: "protection_certs_customers_foreign")
+  @@index([updated_user_id], map: "protection_certs_users_foreign")
+  @@map("protection_certs")
+}
+
+model Purchase {
+  accountingDepartmentDescription    String                     @map("accounting_department_description") @db.VarChar(50)
+  accountingDepartmentId             Int                        @map("accounting_department_id") @db.TinyInt
+  amount                             Decimal                    @db.Decimal(16, 4)
+  comments                           String?                    @db.VarChar(300)
+  createdAt                          DateTime?                  @map("created_at") @db.Date
+  id                                 Int                        @id @default(autoincrement()) @db.UnsignedInt
+  items                              String                     @db.Text
+  payment_type                       EnumPurchasePaymentType
+  priority                           EnumPurchasePriority?      @default(N)
+  requestCollaboratorId              Int                        @map("request_collaborator_id") @db.UnsignedInt
+  requestDepartmentDesc              String                     @map("request_department_desc") @db.VarChar(50)
+  requestDepartmentId                Int                        @map("request_department_id") @db.TinyInt
+  status_purchase                    EnumPurchaseStatusPurchase @default(P)
+  superiorCollaboratorId             Int                        @map("superior_collaborator_id") @db.UnsignedInt
+  updatedAt                          DateTime?                  @map("updated_at") @db.DateTime(0)
+  usersPurchasesCreatedUserIdTousers UserModel?                 @map("users_purchases_created_user_idTousers") @relation(name: "purchasesPurchasesCreatedUserIdTousers", fields: [created_user_id], references: [id])
+  created_user_id                    Int?                       @map("users_purchases_created_user_idTousers")
+  usersPurchasesUpdatedUserIdTousers UserModel?                 @map("users_purchases_updated_user_idTousers") @relation(name: "purchasesPurchasesUpdatedUserIdTousers", fields: [updated_user_id], references: [id])
+  updated_user_id                    Int?                       @map("users_purchases_updated_user_idTousers")
+  vendors                            Vendor?                    @relation(fields: [vendor_id], references: [id])
+  vendor_id                          Int?
+
+  @@index([created_user_id], map: "purchases_users_created_user_id_foreign")
+  @@index([updated_user_id], map: "purchases_users_updated_user_id_foreign")
+  @@index([vendor_id], map: "purchases_vendors_foreign")
+  @@map("purchases")
+}
+
+model RecurringPayment {
+  conektaPaymentTransacs         ConektaPaymentTransac?              @relation(fields: [conekta_payment_transaction_id], references: [id])
+  conekta_payment_transaction_id Int?
+  estatus_intento                EnumRecurringPaymentEstatusIntento?
+  fechaRegistro                  DateTime?                           @map("fecha_registro") @db.Date
+  financedSales                  FinancedSale                        @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id               Int
+  horaRegistro                   DateTime?                           @map("hora_registro") @db.Time(0)
+  id                             Int                                 @id @default(autoincrement()) @db.UnsignedInt
+  mensajeIntento                 String?                             @map("mensaje_intento") @db.VarChar(50)
+  paycodePaymentTransacs         PaycodePaymentTransac?              @relation(fields: [paycode_payment_transaction_id], references: [id])
+  paycode_payment_transaction_id Int?
+  stripePaymentTransacs          StripePaymentTransac?               @relation(fields: [stripe_payment_transaction_id], references: [id])
+  stripe_payment_transaction_id  Int?
+
+  @@index([conekta_payment_transaction_id], map: "recurring_payments_conekta_payment_transacs_foreign")
+  @@index([financed_sale_id], map: "recurring_payments_financed_sales_foreign")
+  @@index([paycode_payment_transaction_id], map: "recurring_payments_paycode_payment_transacs_foreign")
+  @@index([stripe_payment_transaction_id], map: "recurring_payments_stripe_payment_transacs_foreign")
+  @@map("recurring_payments")
+}
+
+model Role {
+  descripcionCargo String @map("descripcion_cargo") @db.VarChar(35)
+  id               Int    @id @default(autoincrement()) @db.UnsignedInt
+  idCargo          Int    @map("id_cargo") @db.UnsignedInt
+
+  @@map("roles")
+}
+
+model ScheduledTasksLog {
+  bitacora           String    @db.Text
+  codigosCompletados String?   @map("codigos_completados") @db.Text
+  codigosInvalidos   String?   @map("codigos_invalidos") @db.Text
+  fechaRegistro      DateTime? @map("fecha_registro") @db.Date
+  id                 Int       @id @default(autoincrement()) @db.UnsignedInt
+  tarea              String?   @db.VarChar(50)
+
+  @@map("scheduled_tasks_log")
+}
+
+model SepomexCode {
+  cCp            Int?                  @map("c_cp") @db.UnsignedMediumInt
+  cCveCiudad     Int?                  @map("c_cve_ciudad") @db.UnsignedTinyInt
+  cEstado        Int?                  @map("c_estado") @db.UnsignedTinyInt
+  cMnpio         Int?                  @map("c_mnpio") @db.UnsignedSmallInt
+  cOficina       Int?                  @map("c_oficina") @db.UnsignedMediumInt
+  cTipoAsenta    Int?                  @map("c_tipo_asenta") @db.UnsignedTinyInt
+  dAsenta        String?               @map("d_asenta") @db.VarChar(80)
+  dCiudad        String?               @map("d_ciudad") @db.VarChar(80)
+  dCodigo        Int                   @default(0) @map("d_codigo") @db.UnsignedMediumInt
+  dCp            Int?                  @map("d_cp") @db.UnsignedMediumInt
+  dEstado        String?               @map("d_estado") @db.VarChar(80)
+  dMnpio         String?               @map("d_mnpio") @db.VarChar(80)
+  dTipoAsenta    String?               @map("d_tipo_asenta") @db.VarChar(80)
+  d_zona         EnumSepomexCodeDZona?
+  id             Int                   @id @default(autoincrement()) @db.UnsignedInt
+  idAsentaCpcons Int                   @default(0) @map("id_asenta_cpcons") @db.UnsignedSmallInt
+
+  @@map("sepomex_codes")
+}
+
+model SimPlan {
+  descripccionPlan String @map("descripccion_plan") @db.VarChar(100)
+  id               Int    @id @default(autoincrement()) @db.UnsignedInt
+
+  @@map("sim_plans")
+}
+
+model SmsMasivosApiLog {
+  createdUserId            Int       @map("created_user_id") @db.UnsignedInt
+  fechaEnvio               DateTime  @map("fecha_envio") @db.Date
+  fechaHoraValidacionToken DateTime? @map("fecha_hora_validacion_token") @db.DateTime(0)
+  headers                  String?   @db.VarChar(100)
+  horaEnvio                DateTime  @map("hora_envio") @db.Time(0)
+  id                       Int       @id @default(autoincrement()) @db.UnsignedInt
+  metodoLlamado            String?   @map("metodo_llamado") @db.VarChar(50)
+  rastreoLlamada           String?   @map("rastreo_llamada") @db.Text
+  respuestaSms             String?   @map("respuesta_sms") @db.Text
+  telefono                 String    @db.VarChar(10)
+  textoSms                 String    @map("texto_sms") @db.VarChar(180)
+  tokenGenerado            String?   @map("token_generado") @db.VarChar(5)
+  url                      String?   @db.VarChar(50)
+
+  @@map("sms_masivos_api_log")
+}
+
+model Stock {
+  existencias     Decimal                 @db.Decimal(12, 5)
+  existMax        Decimal?                @map("exist_max") @db.Decimal(12, 5)
+  existMin        Decimal?                @map("exist_min") @db.Decimal(12, 5)
+  id              Int                     @id @default(autoincrement()) @db.UnsignedInt
+  items           Item                    @relation(fields: [item_id], references: [id])
+  item_id         Int
+  tipo_inventario EnumStockTipoInventario
+  warehouses      Warehouse               @relation(fields: [warehouse_id], references: [id])
+  warehouse_id    Int
+
+  @@unique([warehouse_id, item_id], map: "stock_warehouse_id_itemp_id_unique")
+  @@index([item_id], map: "stock_items_foreign")
+  @@map("stock")
+}
+
+model StockSery {
+  codigoBloqueo    String?                      @map("codigo_bloqueo") @db.VarChar(20)
+  estatus_bloqueo  EnumStockSeryEstatusBloqueo?
+  estatus_serie    EnumStockSeryEstatusSerie
+  id               Int                          @id @default(autoincrement()) @db.UnsignedInt
+  items            Item                         @relation(fields: [item_id], references: [id])
+  item_id          Int
+  otraSerie        String?                      @map("otra_serie") @db.VarChar(30)
+  proveedorBloqueo String?                      @map("proveedor_bloqueo") @db.VarChar(25)
+  serialCode       String                       @map("serial_code") @db.VarChar(30)
+  serieEnrolada    String?                      @map("serie_enrolada") @db.Char(2)
+  warehouses       Warehouse                    @relation(fields: [warehouse_id], references: [id])
+  warehouse_id     Int
+
+  @@unique([item_id, serialCode], map: "stock_series_item_id_serial_code_unique")
+  @@index([warehouse_id], map: "stock_series_warehouses_foreign")
+  @@map("stock_series")
+}
+
+model StripeApiLog {
+  callDate                      DateTime              @map("call_date") @db.Date
+  calledMethod                  String                @map("called_method") @db.VarChar(50)
+  callTime                      DateTime              @map("call_time") @db.Time(0)
+  calltrace                     String?               @db.Text
+  dataSend                      String?               @map("data_send") @db.Text
+  id                            Int                   @id @default(autoincrement()) @db.UnsignedInt
+  response                      String?               @db.Text
+  responseDatetime              DateTime?             @map("response_datetime") @db.DateTime(0)
+  stripePaymentTransacs         StripePaymentTransac? @relation(fields: [stripe_payment_transaction_id], references: [id])
+  stripe_payment_transaction_id Int?
+
+  @@index([stripe_payment_transaction_id], map: "stripe_api_log_stripe_payment_transacs_foreign")
+  @@map("stripe_api_log")
+}
+
+model StripePaymentTransac {
+  amount                  Int                     @db.MediumInt
+  created                 DateTime                @db.DateTime(0)
+  datosPago               String?                 @map("datos_pago") @db.Text
+  eventStatus             String?                 @map("event_status") @db.VarChar(30)
+  fechaRegistro           DateTime?               @map("fecha_registro") @db.DateTime(0)
+  financedSales           FinancedSale            @relation(fields: [financed_sale_id], references: [id])
+  financed_sale_id        Int
+  habilitarPagoRecurrente Int?                    @map("habilitar_pago_recurrente") @db.TinyInt
+  id                      Int                     @id @default(autoincrement()) @db.UnsignedInt
+  linkVoucher             String?                 @map("link_voucher") @db.VarChar(300)
+  metodoPago              String?                 @map("metodo_pago") @db.VarChar(50)
+  otherCompaniesPayments  OtherCompaniesPayment[]
+  paymentIntent           String                  @map("payment_intent") @db.VarChar(30)
+  payments                Payment[]
+  recurringPayments       RecurringPayment[]
+  stripeApiLog            StripeApiLog[]
+  stripeClientSecret      String                  @map("stripe_client_secret") @db.VarChar(100)
+
+  @@index([financed_sale_id], map: "stripe_payment_transacs_financed_sales_foreign")
+  @@index([paymentIntent], map: "stripe_payment_transacs_payment_intent_index")
+  @@map("stripe_payment_transacs")
+}
+
+model StripeWebhookLog {
+  eventId         String?   @map("event_id") @db.VarChar(30)
+  eventStatus     String?   @map("event_status") @db.VarChar(30)
+  eventType       String?   @map("event_type") @db.VarChar(50)
+  fechaRegistro   DateTime? @default(now()) @map("fecha_registro") @db.DateTime(0)
+  id              Int       @id @default(autoincrement()) @db.UnsignedInt
+  paymentIntentId String?   @map("payment_intent_id") @db.VarChar(30)
+  response        String?   @db.Text
+
+  @@map("stripe_webhook_log")
+}
+
+model SupportTicket {
+  codigoBloqueo        String    @map("codigo_bloqueo") @db.VarChar(100)
+  comentarios          String    @db.LongText
+  createdUserId        Int       @map("created_user_id") @db.UnsignedInt
+  customers            Customer? @relation(fields: [customer_id], references: [id])
+  customer_id          Int?
+  estatus              String    @db.VarChar(100)
+  fechaCierre          DateTime  @map("fecha_cierre") @db.DateTime(0)
+  fechaRegistro        DateTime  @map("fecha_registro") @db.DateTime(0)
+  id                   Int       @id @default(autoincrement()) @db.UnsignedInt
+  informacionAdicional String?   @map("informacion_adicional") @db.LongText
+  subtipo              String?   @db.VarChar(50)
+  tipo                 String    @db.VarChar(50)
+
+  @@index([customer_id], map: "support_tickets_customers_foreign")
+  @@map("support_tickets")
+}
+
+model TimelyPayDiscount {
+  descuento         Int     @db.UnsignedTinyInt
+  descuentoDecimal  Decimal @map("descuento_decimal") @db.Decimal(5, 2)
+  descuentoMultiplo Decimal @map("descuento_multiplo") @db.Decimal(5, 2)
+  id                Int     @id @default(autoincrement()) @db.UnsignedInt
+
+  @@map("timely_pay_discounts")
+}
+
+model TransacError {
+  branchOffices    BranchOffice @relation(fields: [branch_office_id], references: [id])
+  branch_office_id Int
+  folioTrans       Int          @map("folio_trans")
+  id               Int          @id @default(autoincrement()) @db.UnsignedInt
+  seriesError      String?      @map("series_error") @db.Text
+
+  @@index([branch_office_id], map: "transac_errors_branch_offices_foreign")
+  @@map("transac_errors")
+}
+
+model Transaction {
+  branchOfficesTransactionsAnotherBranchOfficeIdTobranchOffices BranchOffice?               @relation(name: "branchOfficesTransactionsAnotherBranchOfficeIdTobranchOffices", fields: [another_branch_office_id], references: [id])
+  another_branch_office_id                                      Int?
+  branchOfficesTransactionsBranchOfficeIdTobranchOffices        BranchOffice                @relation(name: "branchOfficesTransactionsBranchOfficeIdTobranchOffices", fields: [branch_office_id], references: [id])
+  branch_office_id                                              Int
+  comentariosTrans                                              String?                     @map("comentarios_trans") @db.VarChar(300)
+  createdUserId                                                 Int?                        @map("created_user_id")
+  customers                                                     Customer?                   @relation(fields: [customer_id], references: [id])
+  customer_id                                                   Int?
+  estatus_trans                                                 EnumTransactionEstatusTrans
+  fechaTrans                                                    DateTime                    @map("fecha_trans") @db.Date
+  financedAccessories                                           FinancedAccessory[]
+  folioDocto                                                    Int                         @map("folio_docto") @db.MediumInt
+  horaTrans                                                     DateTime                    @map("hora_trans") @db.Time(0)
+  id                                                            Int                         @id @default(autoincrement()) @db.UnsignedInt
+  kardex                                                        Kardex[]
+  kardexSeries                                                  KardexSery[]
+  move_type                                                     EnumTransactionMoveType
+  numProveedor                                                  Int?                        @map("num_proveedor") @db.UnsignedInt
+  transacFolio                                                  Int                         @map("transac_folio")
+  transitTransfers                                              TransitTransfer[]
+  warehouses                                                    Warehouse?                  @relation(fields: [another_warehouse_id], references: [id])
+  another_warehouse_id                                          Int?
+
+  @@unique([branch_office_id, transacFolio], map: "transactions_branch_office_id_transac_folio_unique")
+  @@index([another_branch_office_id], map: "transactions_another_branch_offices_foreign")
+  @@index([branch_office_id, move_type, transacFolio], map: "transactions_branch_office_id_move_type_transac_folio_index")
+  @@index([customer_id], map: "transactions_customers_foreign")
+  @@index([another_warehouse_id], map: "transactions_warehouses_foreign")
+  @@map("transactions")
+}
+
+model TransitTransfer {
+  id             Int          @id @default(autoincrement()) @db.UnsignedInt
+  transactions   Transaction? @relation(fields: [transaction_id], references: [id])
+  transaction_id Int?
+
+  @@index([transaction_id], map: "transit_transfers_transactions_foreign")
+  @@map("transit_transfers")
+}
+
+model TrustonicApiLog {
+  callDate         DateTime  @map("call_date") @db.Date
+  calledMethod     String    @map("called_method") @db.VarChar(50)
+  callTime         DateTime  @map("call_time") @db.Time(0)
+  calltrace        String?   @db.Text
+  dataSend         String?   @map("data_send") @db.Text
+  headers          String    @db.VarChar(800)
+  id               Int       @id @default(autoincrement()) @db.UnsignedInt
+  response         String?   @db.Text
+  responseDatetime DateTime? @map("response_datetime") @db.DateTime(0)
+  url              String    @db.VarChar(120)
+
+  @@index([calledMethod, callTime], map: "trustonic_api_log_called_method_call_time_index")
+  @@index([calledMethod], map: "trustonic_api_log_called_method_index")
+  @@map("trustonic_api_log")
+}
+
+model TrustonicHistorical {
+  assignedPolicy               String    @map("assigned_policy") @db.VarChar(50)
+  assignedPolicyActivationTime DateTime? @map("assigned_policy_activation_time") @db.DateTime(0)
+  assignedPolicyAssignmentTime DateTime? @map("assigned_policy_assignment_time") @db.DateTime(0)
+  deviceReady                  Boolean?  @map("device_ready")
+  fechaRegistro                DateTime  @map("fecha_registro") @db.DateTime(0)
+  firstEnrol                   DateTime? @map("first_enrol") @db.DateTime(0)
+  id                           Int       @id @default(autoincrement()) @db.UnsignedInt
+  imeiNo                       String?   @map("imei_no") @db.Char(15)
+  lastCheckin                  DateTime? @map("last_checkin") @db.DateTime(0)
+  lastReportedPolicy           String    @map("last_reported_policy") @db.VarChar(50)
+
+  @@map("trustonic_historicals")
+}
+
+model UserPermission {
+  fechaAsignoPermiso DateTime   @default(now()) @map("fecha_asigno_permiso") @db.Timestamp(0)
+  id                 Int        @id @default(autoincrement()) @db.UnsignedInt
+  idUsrAsignoPermiso Int        @map("id_usr_asigno_permiso")
+  permissions        Permission @relation(fields: [permission_id], references: [id])
+  permission_id      Int
+  users              UserModel  @relation(fields: [user_id], references: [id])
+  user_id            Int
+
+  @@unique([user_id, permission_id], map: "user_permissions_user_id_permission_id_index")
+  @@index([permission_id], map: "user_permissions_permissions_foreign")
+  @@map("user_permissions")
+}
+
+model UserQualityHistory {
+  cantBloqueados30 Int?      @map("cant_bloqueados_30") @db.UnsignedSmallInt
+  cantBloqueados60 Int?      @map("cant_bloqueados_60") @db.UnsignedSmallInt
+  cantFinanc30     Int?      @map("cant_financ_30") @db.UnsignedSmallInt
+  cantFinanc60     Int?      @map("cant_financ_60") @db.UnsignedSmallInt
+  cantFinancUlt37  Int?      @map("cant_financ_ult_37") @db.UnsignedSmallInt
+  cantFinancUlt67  Int?      @map("cant_financ_ult_67") @db.UnsignedSmallInt
+  cantFinancUlt7   Int?      @map("cant_financ_ult_7") @db.UnsignedSmallInt
+  cantFraudes30    Int?      @map("cant_fraudes_30") @db.UnsignedSmallInt
+  cantFraudes60    Int?      @map("cant_fraudes_60") @db.UnsignedSmallInt
+  cantVenc530      Int?      @map("cant_venc_5_30") @db.UnsignedSmallInt
+  cantVenc560      Int?      @map("cant_venc_5_60") @db.UnsignedSmallInt
+  estatusBloqueo   String?   @map("estatus_bloqueo") @db.Char(2)
+  fechaDesbloqueo  DateTime? @map("fecha_desbloqueo") @db.Date
+  id               Int       @id @default(autoincrement()) @db.UnsignedInt
+  idUsrDesbloqueo  Int?      @map("id_usr_desbloqueo") @db.UnsignedInt
+  lockedAt         DateTime  @map("locked_at") @db.Date
+  motivoDesbloqueo String?   @map("motivo_desbloqueo") @db.VarChar(100)
+  pctjBloqueados30 Decimal?  @map("pctj_bloqueados_30") @db.Decimal(6, 4)
+  pctjBloqueados60 Decimal?  @map("pctj_bloqueados_60") @db.Decimal(6, 4)
+  pctjFraudes30    Decimal?  @map("pctj_fraudes_30") @db.Decimal(6, 4)
+  pctjFraudes60    Decimal?  @map("pctj_fraudes_60") @db.Decimal(6, 4)
+  pctjVenc530      Decimal?  @map("pctj_venc_5_30") @db.Decimal(6, 4)
+  pctjVenc560      Decimal?  @map("pctj_venc_5_60") @db.Decimal(6, 4)
+  totalAlertas     Int?      @map("total_alertas") @db.UnsignedSmallInt
+  totalExcesos     Int?      @map("total_excesos") @db.UnsignedSmallInt
+  users            UserModel @relation(fields: [user_id], references: [id])
+  user_id          Int
+
+  @@unique([lockedAt, user_id], map: "user_quality_histories_locked_at_user_id_unique")
+  @@index([user_id], map: "user_quality_histories_users_foreign")
+  @@map("user_quality_histories")
+}
+
+model UserModel {
+  accessLevels                                    AccessLevel?                @relation(fields: [access_level_id], references: [id])
+  access_level_id                                 Int?
+  branchManagers                                  BranchManager[]
+  branchOffices                                   BranchOffice[]
+  collaboratorsCollaboratorsCreatedUserIdTousers  Collaborator[]              @relation(name: "collaboratorsCollaboratorsCreatedUserIdTousers")
+  collaboratorsUsersCollaboratorIdTocollaborators Collaborator?               @relation(name: "collaboratorsUsersCollaboratorIdTocollaborators", fields: [collaborator_id], references: [id])
+  collaborator_id                                 Int?
+  conektaPaymentTransacs                          ConektaPaymentTransac[]
+  customersCustomersCreatedUserIdTousers          Customer[]                  @relation(name: "customersCustomersCreatedUserIdTousers")
+  customersCustomersUpdatedUserIdTousers          Customer[]                  @relation(name: "customersCustomersUpdatedUserIdTousers")
+  estatus_usuario                                 EnumUserModelEstatusUsuario @default(A)
+  fechaRegistroUsuario                            DateTime                    @default(now()) @map("fecha_registro_usuario") @db.Timestamp(0)
+  id                                              Int                         @id @default(autoincrement()) @db.UnsignedInt
+  idColabRegistroUsuario                          Int                         @map("id_colab_registro_usuario")
+  loanedDevicesLoanedDevicesCreatedUserIdTousers  LoanedDevice[]              @relation(name: "loanedDevicesLoanedDevicesCreatedUserIdTousers")
+  loanedDevicesLoanedDevicesReturnedUserIdTousers LoanedDevice[]              @relation(name: "loanedDevicesLoanedDevicesReturnedUserIdTousers")
+  modifiedPermissions                             ModifiedPermission[]
+  nubariumValidations                             NubariumValidation[]
+  passCifrado                                     String                      @map("pass_cifrado") @db.Char(128)
+  permisosExcluidos                               String?                     @map("permisos_excluidos") @db.VarChar(250)
+  personalLoans                                   PersonalLoan[]
+  protectionCerts                                 ProtectionCert[]
+  purchasesPurchasesCreatedUserIdTousers          Purchase[]                  @relation(name: "purchasesPurchasesCreatedUserIdTousers")
+  purchasesPurchasesUpdatedUserIdTousers          Purchase[]                  @relation(name: "purchasesPurchasesUpdatedUserIdTousers")
+  userName                                        String                      @unique @map("user_name") @db.VarChar(20)
+  userPermissions                                 UserPermission[]
+  userQualityHistories                            UserQualityHistory[]
+  vendorsVendorsCreatedUserIdTousers              Vendor[]                    @relation(name: "usersVendorsCreatedUserIdTousers")
+  vendorsVendorsUpdatedUserIdTousers              Vendor[]                    @relation(name: "usersVendorsUpdatedUserIdTousers")
+  warehouseGrants                                 WarehouseGrant[]
+
+  @@index([access_level_id], map: "users_access_levels_foreign")
+  @@index([collaborator_id], map: "users_collaborators_foreign")
+  @@map("users")
+}
+
+model Vendor {
+  addressStreet                    String            @map("address_street") @db.VarChar(50)
+  bankDetails                      String?           @map("bank_details") @db.Text
+  createdAt                        DateTime?         @map("created_at") @db.Date
+  email                            String?           @default("NULL") @db.VarChar(50)
+  id                               Int               @id @default(autoincrement()) @db.UnsignedInt
+  invoicingSystem                  String?           @default("{\"habilitar\":\"I\",\"calle\":\"\",\"num_exterior\":\"\",\"num_interior\":\"\",\"colonia\":\"\",\"codigo_postal\":\"\",\"municipio\":\"\",\"estado\":\"\",\"pais\":\"\",\"telefono\":\"\",\"correo\":\"\"}") @map("invoicing_system") @db.Text
+  municipality                     String            @db.VarChar(100)
+  phoneNumber                      String            @map("phone_number") @db.Char(10)
+  postalCode                       String            @map("postal_code") @db.Char(5)
+  purchases                        Purchase[]
+  state                            String            @db.VarChar(100)
+  status                           EnumVendorStatus? @default(A)
+  suburbName                       String            @map("suburb_name") @db.VarChar(30)
+  updatedAt                        DateTime?         @map("updated_at") @db.Date
+  usersVendorsCreatedUserIdTousers UserModel?        @map("users_vendors_created_user_idTousers") @relation(name: "usersVendorsCreatedUserIdTousers", fields: [created_user_id], references: [id])
+  created_user_id                  Int?              @map("users_vendors_created_user_idTousers")
+  usersVendorsUpdatedUserIdTousers UserModel?        @map("users_vendors_updated_user_idTousers") @relation(name: "usersVendorsUpdatedUserIdTousers", fields: [updated_user_id], references: [id])
+  updated_user_id                  Int?              @map("users_vendors_updated_user_idTousers")
+  vendorName                       String            @unique @map("vendor_name") @db.VarChar(50)
+
+  @@index([created_user_id], map: "vendors_users_created_user_id_foreign")
+  @@index([updated_user_id], map: "vendors_users_updated_user_id_foreign")
+  @@map("vendors")
+}
+
+model WarehouseGrant {
+  fechaAsignacion DateTime  @default(now()) @map("fecha_asignacion") @db.DateTime(0)
+  id              Int       @id @default(autoincrement()) @db.UnsignedInt
+  mainWhouse      Boolean   @default(false) @map("main_whouse")
+  users           UserModel @relation(fields: [user_id], references: [id])
+  user_id         Int
+  warehouses      Warehouse @relation(fields: [warehouse_id], references: [id])
+  warehouse_id    Int
+
+  @@unique([user_id, warehouse_id, mainWhouse], map: "warehouse_grants_user_id_warehouse_id_main_whouse_unique")
+  @@unique([user_id, warehouse_id], map: "warehouse_grants_user_id_warehouse_id_unique")
+  @@index([warehouse_id], map: "warehouse_grants_warehouses_foreign")
+  @@map("warehouse_grants")
+}
+
+model WarehouseLoanAmount {
+  id               Int        @id @default(autoincrement()) @db.UnsignedInt
+  loanAmounts      LoanAmount @relation(fields: [loan_amount_id], references: [id])
+  loan_amount_id   Int
+  loyaltyPromotion String?    @map("loyalty_promotion") @db.Char(2)
+  warehouses       Warehouse  @relation(fields: [warehouse_id], references: [id])
+  warehouse_id     Int
+
+  @@index([loan_amount_id], map: "warehouse_loan_amounts_loan_amounts_foreign")
+  @@index([warehouse_id], map: "warehouse_loan_amounts_warehouses_foreign")
+  @@map("warehouse_loan_amounts")
+}
+
+model WarehouseMandatoryDoc {
+  id                    Int               @id @default(autoincrement()) @db.UnsignedInt
+  mandatoryDocuments    MandatoryDocument @relation(fields: [mandatory_document_id], references: [id])
+  mandatory_document_id Int
+  warehouses            Warehouse         @relation(fields: [warehouse_id], references: [id])
+  warehouse_id          Int
+
+  @@unique([warehouse_id, mandatory_document_id], map: "warehouse_mandatory_docs_unique")
+  @@index([mandatory_document_id], map: "warehouse_mandatory_docs_mandatory_documents_foreign")
+  @@map("warehouse_mandatory_docs")
+}
+
+model Warehouse {
+  ajusteDesctoFinanc                        String?                                     @default("{\"tipo_ajuste_enganche\":NULL,\"monto_ajuste_enganche\":NULL,\"tipo_ajuste_precio_venta\":NULL,\"monto_ajuste_precio_venta\":NULL}") @map("ajuste_descto_financ") @db.VarChar(150)
+  ajusteMontoFijoEnganche                   Decimal?                                    @map("ajuste_monto_fijo_enganche") @db.Decimal(6, 2)
+  autorizarIneErroneaNubarium               Int?                                        @default(0) @map("autorizar_ine_erronea_nubarium") @db.TinyInt
+  autorizarNombresSinCoincidencia           Int?                                        @default(0) @map("autorizar_nombres_sin_coincidencia") @db.TinyInt
+  autorizarSelfieSinCoincidencia            Int?                                        @default(0) @map("autorizar_selfie_sin_coincidencia") @db.TinyInt
+  bloqueoVentaComputadora                   Int                                         @default(0) @map("bloqueo_venta_computadora") @db.UnsignedTinyInt
+  branchManagers                            BranchManager[]
+  branchOffices                             BranchOffice                                @relation(fields: [branch_office_id], references: [id])
+  branch_office_id                          Int
+  cargar_solo_capturas_camara               EnumWarehouseCargarSoloCapturasCamara       @default(I)
+  cashCounts                                CashCount[]
+  cashSales                                 CashSale[]
+  catalogoCodigoPostal                      String?                                     @map("catalogo_codigo_postal") @db.VarChar(50)
+  conektaPaymentTransacs                    ConektaPaymentTransac[]
+  confSaltarValidacionesPrestamosPersonales String?                                     @default("{\"saltar_validaciones\":0,\"telefono_validaciones\":\"\"}") @map("conf_saltar_validaciones_prestamos_personales") @db.Text
+  contratoAlmacen                           String?                                     @map("contrato_almacen") @db.VarChar(100)
+  contratoAlmacenPdf                        String?                                     @map("contrato_almacen_pdf") @db.VarChar(100)
+  createdUserId                             Int                                         @map("created_user_id") @db.UnsignedInt
+  customers                                 Customer[]
+  desctoPagoOportuno                        Int                                         @default(0) @map("descto_pago_oportuno") @db.TinyInt
+  desctoPagoOportunoPrestamos               Int                                         @default(0) @map("descto_pago_oportuno_prestamos") @db.TinyInt
+  descuentoEspecial                         Int?                                        @map("descuento_especial") @db.UnsignedTinyInt
+  deshabilitar_validar_otro_financ          EnumWarehouseDeshabilitarValidarOtroFinanc? @default(I)
+  domicilioFiscal                           String?                                     @map("domicilio_fiscal") @db.VarChar(130)
+  dontLockDevices                           Boolean?                                    @default(dbgenerated("(b'0')")) @map("dont_lock_devices") @db.Bit(1)
+  estatus_almacen                           EnumWarehouseEstatusAlmacen                 @default(A)
+  estimates                                 Estimate[]
+  fechaRegistro                             DateTime                                    @default(now()) @map("fecha_registro") @db.DateTime(0)
+  financedSales                             FinancedSale[]
+  forceAdvancePayments                      Int?                                        @default(0) @map("force_advance_payments") @db.TinyInt
+  habilitarBloqueoClienteCp                 Int?                                        @default(0) @map("habilitar_bloqueo_cliente_cp") @db.TinyInt
+  habilitar_envio_sms                       EnumWarehouseHabilitarEnvioSms?             @default(I)
+  habilitar_envio_whatsapp                  EnumWarehouseHabilitarEnvioWhatsapp?        @default(I)
+  habilitarPrestamoEquipos                  Int?                                        @default(0) @map("habilitar_prestamo_equipos") @db.TinyInt
+  horaInicioPagos                           DateTime?                                   @map("hora_inicio_pagos") @db.Time(0)
+  horaLimitePagos                           DateTime?                                   @map("hora_limite_pagos") @db.Time(0)
+  id                                        Int                                         @id @default(autoincrement()) @db.UnsignedInt
+  impresion_comprobantes_pago               EnumWarehouseImpresionComprobantesPago?     @default(IC)
+  incluirEngancheCorte                      Int?                                        @default(0) @map("incluir_enganche_corte") @db.TinyInt
+  kardex                                    Kardex[]
+  kardexSeries                              KardexSery[]
+  mesa_control                              EnumWarehouseMesaControl                    @default(I)
+  metodo_envio_mensaje                      EnumWarehouseMetodoEnvioMensaje             @default(SMS)
+  nubariumValidations                       NubariumValidation[]
+  otherCompaniesPayments                    OtherCompaniesPayment[]
+  paymentInterests                          PaymentInterest[]
+  payments                                  Payment[]
+  personalLoans                             PersonalLoan[]
+  promocionTemporal                         String?                                     @default("json_object(\"habilitado\",0,\"tipo_descuento\",\"\",\"monto_porcentaje\",0,\"monto_efectivo\",0)") @map("promocion_temporal") @db.VarChar(100)
+  protectionCertActivations                 ProtectionCertActivation[]
+  protectionCerts                           ProtectionCert[]
+  referenciaPago                            Boolean                                     @default(dbgenerated("(b'1')")) @map("referencia_pago") @db.Bit(1)
+  sendSmsUnlinkDevicesNuovo                 Int?                                        @default(0) @map("send_sms_unlink_devices_nuovo") @db.TinyInt
+  stock                                     Stock[]
+  stockSeries                               StockSery[]
+  telefonoValidacion                        String?                                     @map("telefono_validacion") @db.VarChar(10)
+  tipo_sucursal                             EnumWarehouseTipoSucursal                   @default(D)
+  transactions                              Transaction[]
+  ubicacion                                 String?                                     @db.VarChar(130)
+  warehouseGrants                           WarehouseGrant[]
+  warehouseLoanAmounts                      WarehouseLoanAmount[]
+  warehouseMandatoryDocs                    WarehouseMandatoryDoc[]
+  whouseName                                String                                      @unique @map("whouse_name") @db.VarChar(100)
+  whouseNo                                  Int                                         @unique @map("whouse_no") @db.UnsignedMediumInt
+
+  @@index([branch_office_id], map: "warehouses_branch_offices_foreign")
+  @@index([whouseNo], map: "warehouses_whouse_no_index")
+  @@map("warehouses")
+}
+
+model WimotelecomApiLog {
+  callDate         DateTime  @map("call_date") @db.Date
+  calledMethod     String    @map("called_method") @db.VarChar(50)
+  callTime         DateTime  @map("call_time") @db.Time(0)
+  calltrace        String?   @db.Text
+  dataSend         String?   @map("data_send") @db.Text
+  headers          String    @db.VarChar(150)
+  id               Int       @id @default(autoincrement()) @db.UnsignedInt
+  response         String?   @db.Text
+  responseDatetime DateTime? @map("response_datetime") @db.DateTime(0)
+  url              String    @db.VarChar(120)
+
+  @@index([calledMethod, callTime], map: "wimotelecom_api_log_called_method_call_time_index")
+  @@index([calledMethod], map: "wimotelecom_api_log_called_method_index")
+  @@map("wimotelecom_api_log")
+}
+
+enum EnumBankReceiptEstatusFicha {
+  A
+  I
+}
+
+enum EnumBankReceiptEstatusValidacion {
+  SV
+  I
+  C
+  CB
+}
+
+enum EnumBankReceiptTipoDeposito {
+  V
+  T
+}
+
+enum EnumBillBillStatus {
+  I
+  T
+  C
+  E
+  R
+  N
+  D
+  F
+}
+
+enum EnumBillFacturaCerrada {
+  F
+  T
+}
+
+enum EnumBillTipoDocto {
+  FC
+  RE
+}
+
+enum EnumBillTipoSucursal {
+  S
+  D
+}
+
+enum EnumBranchOfficeEstatusSucursal {
+  A
+  I
+}
+
+enum EnumCashCountDetailEstatusDesglose {
+  A
+  I
+}
+
+enum EnumCashCountEstatusValidacion {
+  SV
+  NE
+  I
+  C
+}
+
+enum EnumCashSaleEstatusVenta {
+  A
+  C
+}
+
+enum EnumCollaboratorEstatusColaborador {
+  A
+  I
+}
+
+enum EnumCustomerCteRequiereFactura {
+  S
+  N
+}
+
+enum EnumCustomerEstatusCliente {
+  A
+  I
+}
+
+enum EnumCustomerGeneroCliente {
+  F
+  M
+  O
+}
+
+enum EnumCustomerIneDireccionActual {
+  S
+  N
+}
+
+enum EnumDocumentEstatus {
+  A
+  I
+}
+
+enum EnumEstimateAspiraOtroProducto {
+  N
+  S
+}
+
+enum EnumEstimateAutorizaContacto {
+  N
+  S
+}
+
+enum EnumEstimatePlazo {
+  S
+  Q
+}
+
+enum EnumEstimateRechazoFinanc {
+  N
+  S
+}
+
+enum EnumFinancedSaleBloqueoConfirmado {
+  B
+  D
+}
+
+enum EnumFinancedSaleBloqueoPermanente {
+  A
+  I
+}
+
+enum EnumFinancedSaleEstatusBloqueo {
+  A
+  B
+  DI
+}
+
+enum EnumFinancedSaleEstatusEquipo {
+  A
+  I
+  E
+}
+
+enum EnumFinancedSaleEstatusFinanc {
+  A
+  T
+  C
+  P
+  R
+  CP
+  CT
+}
+
+enum EnumFinancedSaleHabilitarPagoRecurrente {
+  A
+  I
+}
+
+enum EnumFinancedSaleIneVerificado {
+  S
+  N
+}
+
+enum EnumFinancedSalePlazo {
+  S
+  Q
+}
+
+enum EnumItemPriceGamma {
+  BAJA
+  MEDIA
+  ALTA
+  ULTRA_BAJA
+  SIN_INFORMACION
+  MODEM
+}
+
+enum EnumItemPriceTipoVenta {
+  FINANCIAMIENTO
+  CONTADO
+}
+
+enum EnumItemEstatusArt {
+  A
+  I
+}
+
+enum EnumItemOfrecerPlanes {
+  I
+  A
+}
+
+enum EnumItemTipoArt {
+  P
+  S
+}
+
+enum EnumItemTipoInventario {
+  T
+  S
+}
+
+enum EnumKardexTipoInventario {
+  T
+  S
+}
+
+enum EnumLockedDevBadCustomerForcedStatus {
+  L
+  U
+}
+
+enum EnumModifiedPaymentEstatusPago {
+  C
+  E
+  R
+}
+
+enum EnumNuovoHistoricalLocked {
+  T
+  F
+}
+
+enum EnumNuovoHistoricalState {
+  A
+  I
+}
+
+enum EnumOtherCompaniesPaymentEstatusPago {
+  A
+  C
+  P
+}
+
+enum EnumOtherCompaniesPaymentTipoPago {
+  P
+  A
+  D
+  C
+}
+
+enum EnumPaymentPeriodCategoriaPlazo {
+  D
+  P
+}
+
+enum EnumPaymentPeriodTipoPlazo {
+  S
+  Q
+  M
+}
+
+enum EnumPaymentPayStatus {
+  A
+  C
+  P
+}
+
+enum EnumPaymentPayType {
+  P
+  A
+  D
+  C
+  E
+}
+
+enum EnumPersonalLoanEstatusPrestamo {
+  A
+  T
+  C
+}
+
+enum EnumPersonalLoanTipoPlazo {
+  S
+  Q
+}
+
+enum EnumPersonalLoanValidacionesSaltadas {
+  S
+  N
+}
+
+enum EnumPromotionHabilitado {
+  H
+  I
+}
+
+enum EnumPromotionTipoDescuento {
+  P
+  E
+}
+
+enum EnumProtectionCertActivationEstatusBloqueoApartado {
+  A
+  B
+  DI
+}
+
+enum EnumProtectionCertEstatusCert {
+  A
+  C
+}
+
+enum EnumProtectionCertProtecActivadas {
+  NN
+  DN
+  NR
+  DR
+}
+
+enum EnumPurchasePaymentType {
+  E
+  D
+  T
+  C
+}
+
+enum EnumPurchasePriority {
+  N
+  U
+}
+
+enum EnumPurchaseStatusPurchase {
+  P
+  PA
+  CA
+  CD
+  PC
+  TP
+  C
+}
+
+enum EnumRecurringPaymentEstatusIntento {
+  E
+  F
+}
+
+enum EnumSepomexCodeDZona {
+  Urbano
+  Rural
+}
+
+enum EnumStockTipoInventario {
+  T
+  S
+}
+
+enum EnumStockSeryEstatusBloqueo {
+  A
+  B
+  DI
+}
+
+enum EnumStockSeryEstatusSerie {
+  DI
+  VE
+  BA
+  TR
+  PR
+  AP
+}
+
+enum EnumTransactionEstatusTrans {
+  A
+  I
+}
+
+enum EnumTransactionMoveType {
+  IG
+  TE
+  TR
+  EG
+  BA
+  DE
+  PR
+  AP
+  DP
+  EGA
+  DA
+}
+
+enum EnumUserModelEstatusUsuario {
+  A
+  I
+}
+
+enum EnumVendorStatus {
+  A
+  I
+}
+
+enum EnumWarehouseCargarSoloCapturasCamara {
+  A
+  I
+}
+
+enum EnumWarehouseDeshabilitarValidarOtroFinanc {
+  A
+  I
+}
+
+enum EnumWarehouseEstatusAlmacen {
+  A
+  I
+}
+
+enum EnumWarehouseHabilitarEnvioSms {
+  A
+  I
+}
+
+enum EnumWarehouseHabilitarEnvioWhatsapp {
+  A
+  I
+}
+
+enum EnumWarehouseImpresionComprobantesPago {
+  IC
+  IT
+}
+
+enum EnumWarehouseMesaControl {
+  A
+  I
+}
+
+enum EnumWarehouseMetodoEnvioMensaje {
+  SMS
+  WHATSAPP
+}
+
+enum EnumWarehouseTipoSucursal {
+  S
+  D
+}
